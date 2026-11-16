@@ -48,7 +48,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   {
     id: 'dashboard',
-    label: 'Command Center',
+    label: 'Overview',
     icon: LayoutDashboard,
     roles: ['Platform Super Admin', 'Organization Owner', 'Organization Admin', 'Property Manager', 'Concierge', 'Inspector'],
     section: 'core',
@@ -104,7 +104,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     id: 'team',
-    label: 'Team & RBAC',
+    label: 'Team & Roles',
     icon: Users,
     roles: ['Platform Super Admin', 'Organization Owner', 'Organization Admin', 'Property Manager'],
     section: 'org',
@@ -125,7 +125,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     id: 'settings',
-    label: 'Billing, Settings & Audit',
+    label: 'Billing & Settings',
     icon: ShieldCheck,
     roles: ['Platform Super Admin', 'Organization Owner', 'Organization Admin'],
     section: 'org',
@@ -207,8 +207,8 @@ export function AppShell({
             SW
           </div>
           <div>
-            <div className="text-sm font-bold tracking-tight text-slate-900 leading-none">STAYWISE</div>
-            <div className="text-[10px] text-slate-500 mt-0.5">Guest & Ops OS</div>
+            <div className="text-sm font-bold tracking-tight text-slate-900 leading-none">Staywise</div>
+            <div className="text-[10px] text-slate-500 mt-0.5">Property & Guest Ops</div>
           </div>
         </button>
         <Badge variant="brand">{currentOrg?.plan_tier || 'Pro'}</Badge>
@@ -218,7 +218,7 @@ export function AppShell({
       {organizations.length > 0 && (
         <div className="p-3 border-b border-slate-200 bg-slate-50/70">
           <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1">
-            <Lock className="w-3 h-3" /> Isolated Tenant
+            <Lock className="w-3 h-3" /> Workspace
           </div>
           <div className="relative">
             <select

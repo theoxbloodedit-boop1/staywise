@@ -204,7 +204,7 @@ export function IncidentsPage({
                   onChange={(e) =>
                     patchIncident(selected, {
                       assigned_to_name: e.target.value,
-                      status: selected.status === 'New' ? 'Assigned' : selected.status,
+                      status: selected.status === 'Reported' ? 'Assigned' : selected.status,
                     })
                   }
                 >

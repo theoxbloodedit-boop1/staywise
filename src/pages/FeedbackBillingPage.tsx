@@ -10,9 +10,9 @@ import {
   Receipt,
 } from 'lucide-react';
 import { apiFetch, downloadWithAuth } from '../lib/api';
-import { formatDateTimeShort, formatMoney } from '../lib/format';
+import { formatDateTimeShort, formatMoney, REGION_PRESETS } from '../lib/format';
 import { Badge, Button, Card, Input, Modal, PageHeader, Select } from '../components/ui';
-import type { Organization } from '../lib/types';
+import type { Organization, RegionCode } from '../lib/types';
 
 export function FeedbackPage({ orgId }: { orgId: string }) {
   const [items, setItems] = useState<any[]>([]);
@@ -101,7 +101,7 @@ export function SettingsBillingAuditPage({
   const [name, setName] = useState(org?.name || '');
   const [email, setEmail] = useState(org?.contact_email || '');
   const [phone, setPhone] = useState(org?.contact_phone || '');
-  const [country, setCountry] = useState<'US' | 'AU'>(org?.default_country || 'US');
+  const [country, setCountry] = useState<RegionCode>(org?.default_country || 'US');
   const [reqClean, setReqClean] = useState(Boolean(org?.require_cleaning_approval));
   const [reqInsp, setReqInsp] = useState(Boolean(org?.require_pre_arrival_inspection));
 
@@ -226,8 +226,8 @@ export function SettingsBillingAuditPage({
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Billing, Organization Governance & Audit Log"
-        description="Manage subscription tiers, invoices, WAL-safe backups, GDPR data portability, readiness rules, and audit history."
+        title="Billing & Organization Settings"
+        description="Manage subscription tiers, invoices, workspace backups, data exports, readiness preferences, and audit history."
         actions={
           notice && (
             <span className="text-xs font-medium px-3 py-1.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
@@ -253,9 +253,12 @@ export function SettingsBillingAuditPage({
               <Input label="Operations Email" value={email} onChange={(e) => setEmail(e.target.value)} />
               <Input label="Emergency / Ops Phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
             </div>
-            <Select label="Default Jurisdiction" value={country} onChange={(e) => setCountry(e.target.value as 'US' | 'AU')}>
-              <option value="US">United States (USD / 911)</option>
-              <option value="AU">Australia (AUD / 000)</option>
+            <Select label="Default Region" value={country} onChange={(e) => setCountry(e.target.value as RegionCode)}>
+              {(Object.keys(REGION_PRESETS) as RegionCode[]).map((code) => (
+                <option key={code} value={code}>
+                  {REGION_PRESETS[code].label}
+                </option>
+              ))}
             </Select>
 
             <div className="pt-2 border-t border-slate-100 space-y-2 text-xs text-slate-700">

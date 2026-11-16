@@ -67,13 +67,22 @@ propertiesRouter.post(
       return res.status(400).json({ error: 'Property name, street address, city, state, and postal code are required.' });
     }
 
-    const country: 'US' | 'AU' = body.country === 'AU' ? 'AU' : 'US';
-    const currency = body.currency || (country === 'AU' ? 'AUD' : 'USD');
-    const tempUnit = body.temp_unit || (country === 'AU' ? 'C' : 'F');
-    const emergencyNumber = country === 'AU' ? '000' : '911';
-    const timezone = body.timezone || (country === 'AU' ? 'Australia/Sydney' : 'America/Chicago');
-    const coverImage =
-      body.cover_image || (country === 'AU' ? '/images/tallebudgera.webp' : '/images/barton-creek.jpg');
+    const REGION_MAP: Record<string, { currency: string; tempUnit: string; emergency: string; tz: string; img: string }> = {
+      US: { currency: 'USD', tempUnit: 'F', emergency: '911', tz: 'America/Chicago', img: '/images/barton-creek.jpg' },
+      CA: { currency: 'CAD', tempUnit: 'C', emergency: '911', tz: 'America/Toronto', img: '/images/timberline-ridge.jpg' },
+      GB: { currency: 'GBP', tempUnit: 'C', emergency: '999', tz: 'Europe/London', img: '/images/newport-harbor.webp' },
+      EU: { currency: 'EUR', tempUnit: 'C', emergency: '112', tz: 'Europe/Paris', img: '/images/vista-chino.jpg' },
+      AU: { currency: 'AUD', tempUnit: 'C', emergency: '000', tz: 'Australia/Sydney', img: '/images/tallebudgera.webp' },
+      INTL: { currency: 'USD', tempUnit: 'C', emergency: '112', tz: 'UTC', img: '/images/barton-creek.jpg' },
+    };
+    const rawCountry = String(body.country || 'US').toUpperCase();
+    const country = REGION_MAP[rawCountry] ? rawCountry : 'US';
+    const preset = REGION_MAP[country];
+    const currency = body.currency || preset.currency;
+    const tempUnit = body.temp_unit || preset.tempUnit;
+    const emergencyNumber = body.emergency_number || preset.emergency;
+    const timezone = body.timezone || preset.tz;
+    const coverImage = body.cover_image || preset.img;
 
     const propId = uid('prop');
     const slug =
@@ -85,7 +94,7 @@ propertiesRouter.post(
       Math.floor(100 + Math.random() * 899);
 
     const now = nowIso();
-    const fullAddr = `${body.address_line}, ${body.city}, ${body.state} ${body.postal_code}${country === 'AU' ? ', Australia' : ''}`;
+    const fullAddr = `${body.address_line}, ${body.city}, ${body.state} ${body.postal_code}`;
 
     await db.transaction(async (tx) => {
       await tx.execute(
@@ -201,8 +210,16 @@ propertiesRouter.patch(
     if (!canAccessProperty(actor, existing.id)) return res.status(403).json({ error: 'Property access denied.' });
 
     const b = req.body || {};
+    const EMERGENCY_BY_REGION: Record<string, string> = {
+      US: '911',
+      CA: '911',
+      GB: '999',
+      EU: '112',
+      AU: '000',
+      INTL: '112',
+    };
     const country = b.country || existing.country;
-    const emergencyNumber = country === 'AU' ? '000' : '911';
+    const emergencyNumber = b.emergency_number || EMERGENCY_BY_REGION[country] || '112';
 
     if (existing.archived === 1 && b.archived === false) {
       const org = await db.queryOne<any>('SELECT plan_tier, property_limit FROM organizations WHERE id = $1', [

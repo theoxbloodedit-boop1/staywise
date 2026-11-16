@@ -62,8 +62,8 @@ export function DashboardPage({
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Operations Command Center"
-        description={`Real-time operational metrics calculated from recorded events · ${data.dateWindowLabel}`}
+        title="Operations Overview"
+        description={`Live activity across arrivals, turnovers, and open fixes · ${data.dateWindowLabel}`}
         actions={
           <div className="flex items-center gap-2">
             <div className="inline-flex rounded-md border border-slate-200 bg-white p-0.5">
@@ -139,13 +139,13 @@ export function DashboardPage({
         ))}
       </div>
 
-      {/* Property Readiness Matrix (3-Gate Enforcement) */}
+      {/* Property Readiness Matrix */}
       <Card className="overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
-            <h2 className="text-sm font-semibold text-slate-900">Portfolio Readiness Matrix</h2>
+            <h2 className="text-sm font-semibold text-slate-900">Property Readiness Status</h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Every property must clear all 3 gates: Supervisor Cleaning Approval, Pre-Arrival Inspection, and Zero Critical Incidents.
+              A home turns Ready once cleaning is approved, inspection passes, and zero critical fixes remain open.
             </p>
           </div>
           <div className="flex items-center gap-2 text-xs">
@@ -167,11 +167,11 @@ export function DashboardPage({
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50/70 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                   <th className="py-2.5 px-4">Property</th>
-                  <th className="py-2.5 px-4">Jurisdiction</th>
-                  <th className="py-2.5 px-4">Cleaning Gate</th>
-                  <th className="py-2.5 px-4">Inspection Gate</th>
-                  <th className="py-2.5 px-4">Safety Gate</th>
-                  <th className="py-2.5 px-4">Readiness Status</th>
+                  <th className="py-2.5 px-4">Region</th>
+                  <th className="py-2.5 px-4">Cleaning</th>
+                  <th className="py-2.5 px-4">Inspection</th>
+                  <th className="py-2.5 px-4">Safety</th>
+                  <th className="py-2.5 px-4">Status</th>
                   <th className="py-2.5 px-4 text-right">Actions</th>
                 </tr>
               </thead>

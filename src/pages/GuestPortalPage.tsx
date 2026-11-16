@@ -576,10 +576,10 @@ export function GuestPortalPage({ slug }: { slug: string }) {
               <Card className="p-4 bg-slate-900 text-white border-slate-900">
                 <div className="flex items-center gap-2 text-xs font-semibold">
                   <Bot className="w-4 h-4 text-teal-400" />
-                  STAYWISE Verified-Fact AI Assistant ({property.name})
+                  {property.name} · Property Assistant
                 </div>
                 <p className="text-[11px] text-slate-300 mt-1">
-                  Answers strictly from verified property facts. Never guesses unavailable details and immediately escalates urgent issues.
+                  Answers directly from your host’s house guide and lets the team know right away if something needs attention.
                 </p>
               </Card>
 

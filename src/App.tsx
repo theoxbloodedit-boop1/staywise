@@ -60,7 +60,7 @@ const KNOWN_APP_SUBROUTES: Record<string, AppRoute> = {
 function PageLoader() {
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center text-xs text-slate-500">
-      Loading STAYWISE...
+      Loading Staywise...
     </div>
   );
 }

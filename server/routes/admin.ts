@@ -54,7 +54,15 @@ adminRouter.get(
       'SELECT default_country, ai_monthly_allowance FROM organizations WHERE id = $1',
       [actor.organizationId]
     );
-    const defaultTz = org?.default_country === 'AU' ? 'Australia/Sydney' : 'America/Chicago';
+    const TZ_BY_REGION: Record<string, string> = {
+      US: 'America/Chicago',
+      CA: 'America/Toronto',
+      GB: 'Europe/London',
+      EU: 'Europe/Paris',
+      AU: 'Australia/Sydney',
+      INTL: 'UTC',
+    };
+    const defaultTz = TZ_BY_REGION[org?.default_country] || 'America/Chicago';
     const today = getLocalDateStr(defaultTz);
     const cutoffYmd = getLocalDateStr(defaultTz, -days);
     const cutoffIso = `${cutoffYmd}T00:00:00Z`;
@@ -623,7 +631,8 @@ adminRouter.post(
     }
 
     const now = nowIso();
-    const currency = org.default_country === 'AU' ? 'AUD' : 'USD';
+    const CURRENCY_MAP: Record<string, string> = { US: 'USD', CA: 'CAD', GB: 'GBP', EU: 'EUR', AU: 'AUD', INTL: 'USD' };
+    const currency = CURRENCY_MAP[org.default_country] || 'USD';
     const invoiceNum = `INV-${new Date().getUTCFullYear()}-${Math.floor(1000 + Math.random() * 8999)}`;
 
     await db.transaction(async (tx) => {

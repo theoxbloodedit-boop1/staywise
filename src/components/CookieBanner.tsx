@@ -47,7 +47,7 @@ export function CookieBanner({ onNavigate }: { onNavigate: (path: string) => voi
         </button>
       </div>
       <p className="text-xs text-slate-600 leading-relaxed">
-        STAYWISE uses strictly necessary encrypted <code className="font-mono text-[11px] bg-slate-100 px-1 rounded">HttpOnly</code> cookies to secure workspace sessions—never third-party ad trackers. Review our{' '}
+        Staywise uses essential session cookies and encrypted tokens to keep your workspace signed in—never advertising trackers. Review our{' '}
         <button onClick={() => onNavigate('/privacy')} className="text-teal-700 font-medium hover:underline">
           Privacy Policy
         </button>{' '}

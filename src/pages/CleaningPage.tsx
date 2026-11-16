@@ -87,7 +87,7 @@ export function CleaningPage({
     );
     await patchTask(task, {
       checklist: nextChecklist,
-      status: task.status === 'Pending' || task.status === 'Assigned' ? 'In Progress' : task.status,
+      status: task.status === 'Unassigned' || task.status === 'Assigned' ? 'In Progress' : task.status,
     });
   };
 
@@ -172,7 +172,9 @@ export function CleaningPage({
 
                   <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
                     <span className="text-slate-500">Property Readiness:</span>
-                    <Badge variant={statusToBadgeVariant(t.readiness_status)}>{t.readiness_status}</Badge>
+                    <Badge variant={statusToBadgeVariant(t.readiness_status || 'Not Ready')}>
+                      {t.readiness_status || 'Not Ready'}
+                    </Badge>
                   </div>
                 </div>
               </Card>
@@ -198,8 +200,8 @@ export function CleaningPage({
                     {selectedTask.property_name} · Assignee: {selectedTask.assigned_name}
                   </p>
                 </div>
-                <Badge variant={statusToBadgeVariant(selectedTask.readiness_status)}>
-                  Unit: {selectedTask.readiness_status}
+                <Badge variant={statusToBadgeVariant(selectedTask.readiness_status || 'Not Ready')}>
+                  Unit: {selectedTask.readiness_status || 'Not Ready'}
                 </Badge>
               </div>
 

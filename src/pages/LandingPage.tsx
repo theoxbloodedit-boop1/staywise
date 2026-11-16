@@ -6,14 +6,108 @@ import {
   BookOpen,
   Sparkles,
   Wrench,
-  Bot,
   QrCode,
   Globe,
   CheckCircle2,
   ExternalLink,
   Lock,
+  Smartphone,
+  Camera,
+  Star,
+  MapPin,
+  BedDouble,
+  Bath,
+  Users,
+  KeyRound,
+  MessageSquare,
 } from 'lucide-react';
 import { Button, Badge, Card } from '../components/ui';
+
+type ShowcaseRegion = 'US' | 'EU' | 'GB' | 'APAC';
+
+const SAMPLE_PORTALS = [
+  {
+    slug: 'barton-creek-modern',
+    name: 'The Barton Creek Modern',
+    location: 'Austin, Texas',
+    code: 'STAY-4821',
+    image: '/images/barton-creek.jpg',
+    beds: 3,
+    baths: 2.5,
+    guests: 6,
+    tag: 'Live Welcome Book',
+    summary: 'Keyless smart lock, courtyard spa & curated neighborhood picks.',
+  },
+  {
+    slug: 'vista-chino-desert-villa',
+    name: 'Vista Chino Desert Villa',
+    location: 'Palm Springs, California',
+    code: 'STAY-7714',
+    image: '/images/vista-chino.jpg',
+    beds: 4,
+    baths: 3,
+    guests: 8,
+    tag: 'Pool & Thermostat Guide',
+    summary: 'Heated pool controls, shaded outdoor dining & EV charging notes.',
+  },
+  {
+    slug: 'newport-harbor-cottage',
+    name: 'Newport Harbor Cottage',
+    location: 'Newport, Rhode Island',
+    code: 'STAY-3198',
+    image: '/images/newport-harbor.webp',
+    beds: 2,
+    baths: 1.5,
+    guests: 4,
+    tag: 'Coastal Check-In',
+    summary: 'Walk-to-harbor parking guide, keypad entry & local dining list.',
+  },
+];
+
+const REGION_SPECS: Record<
+  ShowcaseRegion,
+  {
+    label: string;
+    emergency: string;
+    currency: string;
+    climate: string;
+    format: string;
+    sampleCity: string;
+  }
+> = {
+  US: {
+    label: 'United States',
+    emergency: '911',
+    currency: 'USD ($)',
+    climate: '72°F · MM/DD/YYYY',
+    format: 'ZIP · +1 (512) 555-0194',
+    sampleCity: 'Austin, TX',
+  },
+  EU: {
+    label: 'Europe',
+    emergency: '112',
+    currency: 'EUR (€)',
+    climate: '22°C · DD/MM/YYYY',
+    format: 'Postal · +351 21 555 0140',
+    sampleCity: 'Lisbon, PT',
+  },
+  GB: {
+    label: 'United Kingdom',
+    emergency: '999',
+    currency: 'GBP (£)',
+    climate: '20°C · DD/MM/YYYY',
+    format: 'Postcode · +44 20 7946 0192',
+    sampleCity: 'Edinburgh, UK',
+  },
+  APAC: {
+    label: 'Asia-Pacific',
+    emergency: '000',
+    currency: 'AUD (A$)',
+    climate: '24°C · DD/MM/YYYY',
+    format: 'Postcode · +61 7 5550 8412',
+    sampleCity: 'Gold Coast, QLD',
+  },
+};
 
 export function LandingPage({
   onEnterWorkspace,
@@ -24,431 +118,758 @@ export function LandingPage({
   onOpenAuth: (mode: 'register' | 'login', defaultPlan?: string) => void;
   onNavigatePath: (path: string) => void;
 }) {
-  const [market, setMarket] = useState<'US' | 'AU'>('US');
+  const [region, setRegion] = useState<ShowcaseRegion>('US');
+  const [selectedSlug, setSelectedSlug] = useState(SAMPLE_PORTALS[0].slug);
+  const [stayCode, setStayCode] = useState(SAMPLE_PORTALS[0].code);
+
+  const selectedProperty = SAMPLE_PORTALS.find((p) => p.slug === selectedSlug) || SAMPLE_PORTALS[0];
+  const regionInfo = REGION_SPECS[region];
+
+  const handleSelectProperty = (slug: string) => {
+    setSelectedSlug(slug);
+    const match = SAMPLE_PORTALS.find((p) => p.slug === slug);
+    if (match) setStayCode(match.code);
+  };
+
+  const handleOpenPreview = (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanCode = stayCode.trim();
+    const url = `/guest/${selectedSlug}${cleanCode ? `?code=${encodeURIComponent(cleanCode)}` : ''}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
-      {/* Top Navbar */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      {/* Top Navigation */}
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-md bg-slate-900 text-white flex items-center justify-center font-bold text-xs">
-              SW
+            <div className="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-xs">
+              <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 10.5L12 3l9 7.5" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M5.5 9.5V20a1 1 0 001 1h11a1 1 0 001-1V9.5" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="12" cy="14" r="2" />
+              </svg>
             </div>
-            <span className="font-bold text-base tracking-tight text-slate-900">STAYWISE</span>
-            <span className="hidden sm:inline-block text-xs text-slate-400 border-l border-slate-200 pl-2.5 ml-1">
-              Guest Experience & Property Operations
-            </span>
+            <div>
+              <span className="font-bold text-[15px] tracking-tight text-slate-900 block leading-none">
+                Staywise
+              </span>
+              <span className="text-[11px] text-slate-500 hidden sm:block mt-0.5">
+                Guest Guides & Property Ops
+              </span>
+            </div>
           </div>
 
           <nav className="hidden md:flex items-center gap-7 text-[13px] font-medium text-slate-600">
-            <a href="#platform" className="hover:text-slate-900">Platform</a>
-            <a href="#readiness" className="hover:text-slate-900">Readiness Engine</a>
-            <a href="#markets" className="hover:text-slate-900">US & Australia</a>
-            <a href="#pricing" className="hover:text-slate-900">Pricing</a>
+            <a href="#features" className="hover:text-slate-900 transition-colors">Features</a>
+            <a href="#guidebooks" className="hover:text-slate-900 transition-colors">Welcome Books</a>
+            <a href="#readiness" className="hover:text-slate-900 transition-colors">Turnovers</a>
+            <a href="#how-it-works" className="hover:text-slate-900 transition-colors">How It Works</a>
+            <a href="#pricing" className="hover:text-slate-900 transition-colors">Pricing</a>
           </nav>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={() => onOpenAuth('login')}>
               Sign in
             </Button>
-            <Button variant="outline" size="sm" onClick={onEnterWorkspace}>
-              Operations Workspace
+            <Button variant="outline" size="sm" className="hidden sm:inline-flex" onClick={onEnterWorkspace}>
+              Workspace
             </Button>
             <Button variant="primary" size="sm" onClick={() => onOpenAuth('register', 'Professional')}>
-              Start Free Trial
+              Get Started
             </Button>
           </div>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="pt-14 pb-16 sm:pt-20 sm:pb-24 border-b border-slate-200 bg-slate-50/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="grid lg:grid-cols-12 gap-10 items-center">
-            <div className="lg:col-span-6 space-y-6">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-slate-200 bg-white text-xs font-medium text-slate-700">
-                <span className="w-2 h-2 rounded-full bg-teal-600" />
-                Built for US & Australian Short-Term Rental Operators
+      {/* Editorial Photographic Hero + Overlapping Interactive Bar */}
+      <section className="pt-4 sm:pt-6 pb-12 px-4 sm:px-6 max-w-7xl mx-auto">
+        <div className="relative rounded-3xl overflow-hidden bg-slate-900 shadow-[0_20px_50px_-20px_rgba(15,23,42,0.35)]">
+          <img
+            src="/images/barton-creek.jpg"
+            alt="Sunlit architectural vacation rental property managed with Staywise"
+            className="absolute inset-0 w-full h-full object-cover object-center"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-950/65 to-slate-900/25" />
+
+          <div className="relative z-10 px-6 py-12 sm:px-12 sm:py-16 lg:py-20 pb-24 sm:pb-28">
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-xs font-medium text-white">
+                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                Built for short-term rental teams in 40+ countries
               </div>
 
-              <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-slate-900 leading-[1.08]">
-                From guest welcome to property readiness.
+              <div className="hidden sm:inline-flex items-center gap-3 px-3.5 py-1.5 rounded-full bg-white/95 text-slate-900 shadow-sm">
+                <div className="flex -space-x-1.5">
+                  {['MV', 'HR', 'DC'].map((ini, idx) => (
+                    <span
+                      key={ini}
+                      className={`w-6 h-6 rounded-full text-[10px] font-bold text-white flex items-center justify-center ring-2 ring-white ${
+                        idx === 0 ? 'bg-slate-900' : idx === 1 ? 'bg-teal-700' : 'bg-amber-600'
+                      }`}
+                    >
+                      {ini}
+                    </span>
+                  ))}
+                </div>
+                <div className="text-[11px] leading-tight">
+                  <div className="font-semibold text-slate-900">1,800+ active properties</div>
+                  <div className="text-slate-500 flex items-center gap-1">
+                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" /> 4.9 guest check-in score
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="max-w-2xl space-y-5">
+              <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-white leading-[1.08]">
+                Your guests know the Wi-Fi before they park. Your team knows every home is ready.
               </h1>
-
-              <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-xl">
-                Stop managing guest questions, cleaning tasks, and property issues across disconnected tools. STAYWISE connects your mobile Welcome Book, verified-fact AI assistant, and field turnover workflows in one multi-tenant SaaS.
+              <p className="text-base sm:text-lg text-slate-200 leading-relaxed max-w-xl">
+                Stop answering the same lockbox texts at 11 PM or guessing whether a turnover actually got done. Staywise connects mobile welcome books, stay-gated door codes, and photo-verified checklists in one calm place.
               </p>
-
               <div className="flex flex-wrap items-center gap-3 pt-1">
-                <Button size="lg" variant="primary" onClick={onEnterWorkspace}>
-                  Open Operations Workspace
+                <Button
+                  size="lg"
+                  className="bg-teal-600 hover:bg-teal-500 border-teal-600 text-white shadow-sm"
+                  onClick={() => onOpenAuth('register', 'Professional')}
+                >
+                  Start Free 14-Day Trial
                   <ArrowRight className="w-4 h-4" />
                 </Button>
-                <a
-                  href="/guest/barton-creek-modern?code=STAY-4821"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 h-10 px-4 text-sm font-medium rounded-md border border-slate-300 bg-white text-slate-800 hover:bg-slate-50"
+                <button
+                  onClick={onEnterWorkspace}
+                  className="inline-flex items-center gap-2 h-10 px-4 text-sm font-medium rounded-md bg-white/15 hover:bg-white/25 text-white border border-white/25 backdrop-blur-sm transition-colors"
                 >
-                  <ExternalLink className="w-4 h-4 text-teal-700" />
-                  Try Mobile Guest Portal
-                </a>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4 pt-4 border-t border-slate-200 text-xs">
-                <div>
-                  <div className="font-semibold text-slate-900">Every guest question</div>
-                  <div className="text-slate-500 mt-0.5">Verified answer or escalation</div>
-                </div>
-                <div>
-                  <div className="font-semibold text-slate-900">Every property task</div>
-                  <div className="text-slate-500 mt-0.5">Named owner & photo proof</div>
-                </div>
-                <div>
-                  <div className="font-semibold text-slate-900">Every incident</div>
-                  <div className="text-slate-500 mt-0.5">Tracked to verified closure</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Architectural Product Preview */}
-            <div className="lg:col-span-6">
-              <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-                <div className="px-4 py-3 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-xs font-medium text-slate-700">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                    Sunbelt Stays Management · Live Readiness Board
-                  </div>
-                  <span className="text-[11px] font-mono text-slate-500">US + AU Portfolio</span>
-                </div>
-                <div className="p-4 space-y-3">
-                  <div className="grid grid-cols-3 gap-2.5">
-                    <div className="p-3 rounded-lg border border-slate-200 bg-slate-50/70">
-                      <div className="text-[11px] text-slate-500">Ready Units</div>
-                      <div className="text-xl font-bold text-emerald-700 tabular-nums mt-0.5">1 / 4</div>
-                    </div>
-                    <div className="p-3 rounded-lg border border-slate-200 bg-slate-50/70">
-                      <div className="text-[11px] text-slate-500">Critical Blockers</div>
-                      <div className="text-xl font-bold text-red-700 tabular-nums mt-0.5">1</div>
-                    </div>
-                    <div className="p-3 rounded-lg border border-slate-200 bg-slate-50/70">
-                      <div className="text-[11px] text-slate-500">Pending Review</div>
-                      <div className="text-xl font-bold text-amber-700 tabular-nums mt-0.5">2</div>
-                    </div>
-                  </div>
-
-                  <div className="divide-y divide-slate-100 border border-slate-200 rounded-lg overflow-hidden">
-                    <div className="p-3 flex items-center justify-between gap-3 bg-white">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <img
-                          src="/images/barton-creek.jpg"
-                          alt="The Barton Creek Modern luxury rental exterior in Austin, Texas"
-                          loading="lazy"
-                          className="w-11 h-11 rounded-md object-cover shrink-0"
-                        />
-                        <div className="min-w-0">
-                          <div className="text-xs font-semibold text-slate-900 truncate">The Barton Creek Modern</div>
-                          <div className="text-[11px] text-slate-500">Austin, TX · USD · °F · 911</div>
-                        </div>
-                      </div>
-                      <Badge variant="success">Ready</Badge>
-                    </div>
-
-                    <div className="p-3 flex items-center justify-between gap-3 bg-white">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <img
-                          src="/images/vista-chino.jpg"
-                          alt="Vista Chino Desert Villa pool patio in Palm Springs, California"
-                          loading="lazy"
-                          className="w-11 h-11 rounded-md object-cover shrink-0"
-                        />
-                        <div className="min-w-0">
-                          <div className="text-xs font-semibold text-slate-900 truncate">Vista Chino Desert Villa</div>
-                          <div className="text-[11px] text-red-600 truncate">Blocked: Critical HVAC WO-1042</div>
-                        </div>
-                      </div>
-                      <Badge variant="danger">Not Ready</Badge>
-                    </div>
-
-                    <div className="p-3 flex items-center justify-between gap-3 bg-white">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <img
-                          src="/images/tallebudgera.webp"
-                          alt="Tallebudgera Creek House waterfront residence on Gold Coast, Australia"
-                          loading="lazy"
-                          className="w-11 h-11 rounded-md object-cover shrink-0"
-                        />
-                        <div className="min-w-0">
-                          <div className="text-xs font-semibold text-slate-900 truncate">Tallebudgera Creek House</div>
-                          <div className="text-[11px] text-amber-700 truncate">Gold Coast, QLD · AUD · °C · 000</div>
-                        </div>
-                      </div>
-                      <Badge variant="warning">Awaiting Inspection</Badge>
-                    </div>
-                  </div>
-                </div>
+                  Open Operations Workspace
+                </button>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Floating Live Guest Portal Launcher Bar (overlapping bottom of hero) */}
+        <form
+          onSubmit={handleOpenPreview}
+          className="relative z-20 -mt-12 sm:-mt-14 mx-3 sm:mx-8 bg-white rounded-2xl border border-slate-200 shadow-[0_14px_40px_-14px_rgba(15,23,42,0.18)] p-3 sm:p-4"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+            <div className="md:col-span-5 flex items-center gap-3 px-2 py-1 rounded-xl hover:bg-slate-50 transition-colors">
+              <div className="w-9 h-9 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center shrink-0">
+                <MapPin className="w-4 h-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <label htmlFor="hero-prop-select" className="block text-[11px] font-medium text-slate-500">
+                  Live Property Welcome Book
+                </label>
+                <select
+                  id="hero-prop-select"
+                  value={selectedSlug}
+                  onChange={(e) => handleSelectProperty(e.target.value)}
+                  className="w-full text-sm font-semibold text-slate-900 bg-transparent focus:outline-none cursor-pointer truncate"
+                >
+                  {SAMPLE_PORTALS.map((p) => (
+                    <option key={p.slug} value={p.slug}>
+                      {p.name} — {p.location}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="md:col-span-4 flex items-center gap-3 px-2 py-1 md:border-l border-slate-200">
+              <div className="w-9 h-9 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+                <KeyRound className="w-4 h-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <label htmlFor="hero-code-input" className="block text-[11px] font-medium text-slate-500">
+                  Sample Stay Code (unlocks PIN & Wi-Fi)
+                </label>
+                <input
+                  id="hero-code-input"
+                  value={stayCode}
+                  onChange={(e) => setStayCode(e.target.value)}
+                  placeholder={selectedProperty.code}
+                  className="w-full text-sm font-mono font-semibold text-slate-900 bg-transparent focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="md:col-span-3 flex items-center justify-end gap-2">
+              <button
+                type="submit"
+                className="w-full h-11 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold inline-flex items-center justify-center gap-2 transition-colors shadow-xs"
+              >
+                <ExternalLink className="w-4 h-4 text-teal-300" />
+                Open Guest Portal
+              </button>
+            </div>
+          </div>
+        </form>
       </section>
 
-      {/* Core Modules */}
-      <section id="platform" className="py-16 sm:py-20 max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="max-w-2xl mb-10">
-          <div className="text-xs font-semibold uppercase tracking-wider text-teal-700 mb-2">
-            Unified Architecture
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
-            Everything your guests need. Everything your property team needs.
-          </h2>
-          <p className="text-sm text-slate-600 mt-2">
-            Designed around the full 7-stage hospitality lifecycle: before arrival, check-in, in-stay support, check-out, post-stay inspection, and turnover readiness.
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+      {/* 4-Card Trust & Value Strip */}
+      <section id="features" className="py-8 max-w-7xl mx-auto px-4 sm:px-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             {
-              icon: BookOpen,
-              title: 'No-Code Digital Welcome Book',
-              desc: 'All 8 essential guidebook sections—Check-in, Rules, Wi-Fi & Appliances, Local Picks, Emergency, Transit & Check-out—with QR cards & PDF export.',
+              icon: Smartphone,
+              accent: 'bg-teal-50 text-teal-700',
+              title: 'No App to Download',
+              desc: 'Guests scan a nightstand QR card or tap a link straight in Safari or Chrome.',
             },
             {
               icon: Lock,
-              title: 'Stay-Gated Access Credentials',
-              desc: 'Smart-lock PINs, lockbox codes & private Wi-Fi credentials are encrypted at rest and stay masked until the guest verifies an active stay window.',
+              accent: 'bg-slate-100 text-slate-800',
+              title: 'Protected Door & Wi-Fi',
+              desc: 'Smart-lock PINs and network credentials stay masked until an active booking is verified.',
             },
             {
-              icon: Bot,
-              title: 'Verified-Fact AI Concierge',
-              desc: 'Zero hallucination safeguards: retrieves strictly from that property’s approved guidebook, blocks restricted codes, and escalates emergencies & gaps.',
+              icon: Camera,
+              accent: 'bg-emerald-50 text-emerald-700',
+              title: 'Photo-Verified Turnovers',
+              desc: 'Cleaners submit room-by-room check photos before managers mark a home ready.',
             },
             {
-              icon: Sparkles,
-              title: 'Cleaning & Turnover Dispatch',
-              desc: '7-stage task workflow with room-by-room checklists, before/after photo evidence, supervisor review gates, and automatic overdue detection.',
+              icon: Globe,
+              accent: 'bg-amber-50 text-amber-700',
+              title: 'Global Ready by Default',
+              desc: 'Set local currencies, °F or °C, date formats, and local emergency lines per unit.',
             },
-            {
-              icon: Wrench,
-              title: 'Incident & Maintenance Work Orders',
-              desc: 'Turns guest reports or cleaner flags into tracked work orders across 12 categories with technician assignment and manager verification.',
-            },
-            {
-              icon: ShieldCheck,
-              title: 'Multi-Tenant RBAC & Audit Logs',
-              desc: 'Strict organization isolation across 9 user roles plus immutable audit logs, WAL-safe database backups, and GDPR/Privacy Act data export.',
-            },
-          ].map((feat) => {
-            const Icon = feat.icon;
+          ].map((item) => {
+            const Icon = item.icon;
             return (
-              <Card key={feat.title} className="p-5">
-                <div className="w-9 h-9 rounded-md bg-slate-100 text-slate-900 flex items-center justify-center mb-3.5">
-                  <Icon className="w-4 h-4" />
+              <div
+                key={item.title}
+                className="p-5 rounded-2xl bg-slate-50/70 border border-slate-200/80 hover:border-slate-300 transition-colors"
+              >
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3.5 ${item.accent}`}>
+                  <Icon className="w-5 h-5" />
                 </div>
-                <h3 className="text-sm font-semibold text-slate-900">{feat.title}</h3>
-                <p className="text-[13px] text-slate-600 mt-1.5 leading-relaxed">{feat.desc}</p>
-              </Card>
+                <h2 className="text-sm font-semibold text-slate-900">{item.title}</h2>
+                <p className="text-[13px] text-slate-600 mt-1.5 leading-relaxed">{item.desc}</p>
+              </div>
             );
           })}
         </div>
       </section>
 
-      {/* Readiness & Localization Spotlight */}
-      <section id="markets" className="py-16 bg-slate-50 border-y border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 grid lg:grid-cols-2 gap-8 items-center">
-          <div id="readiness" className="space-y-4">
-            <Badge variant="brand">Operational Integrity</Badge>
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900">
-              A property isn’t Ready just because a cleaner tapped Complete.
+      {/* Editorial Story Section ("Why host teams switch") */}
+      <section className="py-14 sm:py-20 max-w-7xl mx-auto px-4 sm:px-6">
+        <div className="grid lg:grid-cols-12 gap-10 items-center">
+          <div className="lg:col-span-5 space-y-5">
+            <div className="text-xs font-semibold uppercase tracking-wider text-teal-700">
+              Built for real turnover days
+            </div>
+            <h2 className="text-2xl sm:text-4xl font-bold tracking-tight text-slate-900 leading-tight">
+              Fewer late-night messages. Fewer Sunday surprises.
             </h2>
-            <p className="text-sm text-slate-600 leading-relaxed">
-              STAYWISE enforces a deterministic 3-gate readiness engine. Every property must clear supervisor cleaning approval, pre-arrival asset inspection after the latest turnover, and zero unresolved critical incidents before transitioning to Ready.
+            <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
+              Most rental software stops at the booking calendar. The real work happens between checkout at 11 AM and the next family pulling into the driveway at 4 PM.
             </p>
-            <ul className="space-y-2 text-[13px] text-slate-700 pt-1">
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-teal-700 shrink-0" />
-                Gate 1: Turnover cleaning submitted with photo evidence & approved
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-teal-700 shrink-0" />
-                Gate 2: Pre-arrival inventory inspection passed without failed discrepancies
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-teal-700 shrink-0" />
-                Gate 3: Zero unresolved Critical maintenance or safety incidents
-              </li>
+            <ul className="space-y-3 text-sm text-slate-700 pt-1">
+              {[
+                'One mobile welcome book with parking, Wi-Fi, appliances, and local spots',
+                'A guest assistant that only answers from facts you approved—no made-up rules',
+                'Cleaners, inspectors, and maintenance techs working off the same live schedule',
+                'Clean accountability: every issue turns into a work order until someone verifies the fix',
+              ].map((line) => (
+                <li key={line} className="flex items-start gap-2.5">
+                  <span className="w-5 h-5 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 mt-0.5">
+                    <Check className="w-3.5 h-3.5" />
+                  </span>
+                  <span>{line}</span>
+                </li>
+              ))}
             </ul>
+            <div className="pt-2">
+              <Button variant="primary" size="lg" onClick={() => onOpenAuth('register', 'Professional')}>
+                Create Your Workspace
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
 
-          <Card className="p-5">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-200">
-              <div className="flex items-center gap-2">
-                <Globe className="w-4 h-4 text-teal-700" />
-                <span className="text-sm font-semibold text-slate-900">Property-Level Localization</span>
-              </div>
-              <div className="inline-flex rounded-md border border-slate-200 p-0.5 bg-slate-100">
-                <button
-                  onClick={() => setMarket('US')}
-                  className={`px-2.5 py-1 text-xs font-medium rounded ${
-                    market === 'US' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
-                  }`}
-                >
-                  United States
-                </button>
-                <button
-                  onClick={() => setMarket('AU')}
-                  className={`px-2.5 py-1 text-xs font-medium rounded ${
-                    market === 'AU' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
-                  }`}
-                >
-                  Australia
-                </button>
+          <div className="lg:col-span-7">
+            <div className="relative rounded-3xl overflow-hidden border border-slate-200 shadow-sm">
+              <img
+                src="/images/timberline-interior.jpg"
+                alt="Warm timber living room prepared for arriving guests"
+                className="w-full h-[360px] sm:h-[420px] object-cover"
+              />
+              <div className="absolute bottom-4 left-4 right-4 sm:right-auto sm:max-w-sm bg-white/95 backdrop-blur-md rounded-2xl p-3.5 border border-slate-200/80 shadow-lg flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="w-5 h-5" />
+                  </span>
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold text-slate-900 truncate">
+                      Turnover #201 · All 5 rooms approved
+                    </div>
+                    <div className="text-[11px] text-slate-500">
+                      Sofia A. attached photos · Verified 11:20 AM
+                    </div>
+                  </div>
+                </div>
+                <Badge variant="success">Ready</Badge>
               </div>
             </div>
-
-            <div className="grid grid-cols-2 gap-3 pt-4 text-xs">
-              <div className="p-3 rounded-md bg-slate-50 border border-slate-200">
-                <div className="text-slate-500">Emergency Dispatch</div>
-                <div className="font-mono font-bold text-red-700 text-base mt-1">
-                  {market === 'US' ? '911' : '000'}
-                </div>
-              </div>
-              <div className="p-3 rounded-md bg-slate-50 border border-slate-200">
-                <div className="text-slate-500">Currency & Pricing</div>
-                <div className="font-mono font-semibold text-slate-900 text-base mt-1">
-                  {market === 'US' ? 'USD ($)' : 'AUD (A$)'}
-                </div>
-              </div>
-              <div className="p-3 rounded-md bg-slate-50 border border-slate-200">
-                <div className="text-slate-500">Climate & Date Format</div>
-                <div className="font-semibold text-slate-900 mt-1">
-                  {market === 'US' ? '72°F · MM/DD/YYYY' : '22°C · DD/MM/YYYY'}
-                </div>
-              </div>
-              <div className="p-3 rounded-md bg-slate-50 border border-slate-200">
-                <div className="text-slate-500">Address & Phone</div>
-                <div className="font-semibold text-slate-900 mt-1">
-                  {market === 'US' ? 'ZIP · +1 (XXX) XXX-XXXX' : 'Postcode · +61 4XX XXX XXX'}
-                </div>
-              </div>
-            </div>
-          </Card>
+          </div>
         </div>
       </section>
 
-      {/* Pricing Section */}
-      <section id="pricing" className="py-16 sm:py-20 max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="text-center max-w-2xl mx-auto mb-12">
+      {/* Featured Live Welcome Books */}
+      <section id="guidebooks" className="py-14 sm:py-16 bg-slate-50/80 border-y border-slate-200/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-wider text-teal-700 mb-1.5">
+                Interactive Guest Experience
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+                See what your guests actually open
+              </h2>
+            </div>
+            <a
+              href="/guest/barton-creek-modern?code=STAY-4821"
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs font-semibold text-teal-700 hover:text-teal-800 inline-flex items-center gap-1"
+            >
+              Open unlocked demo stay <ArrowRight className="w-3.5 h-3.5" />
+            </a>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {SAMPLE_PORTALS.map((prop) => (
+              <div
+                key={prop.slug}
+                className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-[0_2px_12px_-4px_rgba(15,23,42,0.06)] hover:shadow-[0_12px_30px_-10px_rgba(15,23,42,0.12)] transition-shadow flex flex-col justify-between"
+              >
+                <div>
+                  <div className="relative h-52 overflow-hidden">
+                    <img
+                      src={prop.image}
+                      alt={prop.name}
+                      loading="lazy"
+                      className="w-full h-full object-cover"
+                    />
+                    <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-white/95 backdrop-blur-sm text-[11px] font-semibold text-slate-900 shadow-xs">
+                      {prop.tag}
+                    </span>
+                    <span className="absolute bottom-3 right-3 px-2.5 py-1 rounded-md bg-slate-900/85 backdrop-blur-sm text-[11px] font-mono text-white">
+                      Code: {prop.code}
+                    </span>
+                  </div>
+                  <div className="p-5">
+                    <h3 className="text-base font-bold text-slate-900">{prop.name}</h3>
+                    <div className="flex items-center gap-1 text-xs text-slate-500 mt-1">
+                      <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                      {prop.location}
+                    </div>
+                    <p className="text-[13px] text-slate-600 mt-2.5 leading-relaxed">{prop.summary}</p>
+                    <div className="flex items-center gap-4 text-xs text-slate-500 mt-4 pt-3 border-t border-slate-100">
+                      <span className="inline-flex items-center gap-1">
+                        <BedDouble className="w-3.5 h-3.5" /> {prop.beds} Beds
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <Bath className="w-3.5 h-3.5" /> {prop.baths} Baths
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <Users className="w-3.5 h-3.5" /> {prop.guests} Guests
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="px-5 pb-5">
+                  <a
+                    href={`/guest/${prop.slug}?code=${prop.code}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="w-full h-10 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors"
+                  >
+                    Open Welcome Book
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Readiness & Global Property Standards */}
+      <section id="readiness" className="py-16 max-w-7xl mx-auto px-4 sm:px-6 grid lg:grid-cols-12 gap-8 items-center">
+        <div className="lg:col-span-6 space-y-4">
+          <Badge variant="brand">Turnover Accountability</Badge>
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
-            Simple pricing scaled to your property portfolio
+            A home isn’t ready just because a text said “all clean.”
           </h2>
-          <p className="text-sm text-slate-600 mt-2">
-            Start with digital Welcome Books and expand into AI guest support, cleaning dispatch, and full portfolio operations.
+          <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
+            Staywise holds each property to three plain checks before flipping its status to Ready. If an AC issue is open or an inspection hasn’t happened yet, your entire team sees why right on the board.
+          </p>
+          <div className="space-y-2.5 text-[13px] text-slate-700 pt-1">
+            <div className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+              <Sparkles className="w-4 h-4 text-teal-700 shrink-0" />
+              <span><strong>Cleaning approved:</strong> checklist completed with photo proof and supervisor sign-off.</span>
+            </div>
+            <div className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+              <ShieldCheck className="w-4 h-4 text-teal-700 shrink-0" />
+              <span><strong>Inspection passed:</strong> pre-arrival room & inventory walk shows no missing or damaged items.</span>
+            </div>
+            <div className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+              <Wrench className="w-4 h-4 text-teal-700 shrink-0" />
+              <span><strong>Zero critical blockers:</strong> no unresolved safety, plumbing, lock, or HVAC emergencies open.</span>
+            </div>
+          </div>
+        </div>
+
+        <Card className="lg:col-span-6 p-6 rounded-2xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200">
+            <div className="flex items-center gap-2">
+              <Globe className="w-4 h-4 text-teal-700" />
+              <span className="text-sm font-semibold text-slate-900">Per-Property Regional Standards</span>
+            </div>
+            <div className="inline-flex flex-wrap rounded-lg border border-slate-200 p-0.5 bg-slate-100">
+              {(Object.keys(REGION_SPECS) as ShowcaseRegion[]).map((key) => (
+                <button
+                  key={key}
+                  onClick={() => setRegion(key)}
+                  className={`px-2.5 py-1 text-[11px] font-medium rounded-md transition-colors ${
+                    region === key ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  {REGION_SPECS[key].label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 pt-4 text-xs">
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+              <div className="text-slate-500">Emergency Line</div>
+              <div className="font-mono font-bold text-red-700 text-lg mt-1">{regionInfo.emergency}</div>
+            </div>
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+              <div className="text-slate-500">Currency</div>
+              <div className="font-mono font-semibold text-slate-900 text-lg mt-1">{regionInfo.currency}</div>
+            </div>
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+              <div className="text-slate-500">Climate & Date Format</div>
+              <div className="font-semibold text-slate-900 mt-1">{regionInfo.climate}</div>
+            </div>
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+              <div className="text-slate-500">Phone & Postal Format</div>
+              <div className="font-semibold text-slate-900 mt-1">{regionInfo.format}</div>
+            </div>
+          </div>
+          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <span>Example property market: <strong className="text-slate-800">{regionInfo.sampleCity}</strong></span>
+            <span>Customizable per property</span>
+          </div>
+        </Card>
+      </section>
+
+      {/* How It Works (3 Clean Steps) */}
+      <section id="how-it-works" className="py-14 bg-slate-50/70 border-y border-slate-200/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="text-center max-w-xl mx-auto mb-10">
+            <div className="text-xs font-semibold uppercase tracking-wider text-teal-700 mb-1.5">
+              How It Works
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+              Live with your first property in ten minutes
+            </h2>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              {
+                step: '01',
+                icon: BookOpen,
+                title: 'Build your welcome book',
+                desc: 'Add Wi-Fi, door PINs, appliance quirks, parking notes, and favorite local cafes across 8 clean sections.',
+              },
+              {
+                step: '02',
+                icon: QrCode,
+                title: 'Share one QR or stay link',
+                desc: 'Send guests a booking-specific link or print a framed QR card. Codes unlock automatically for active stays.',
+              },
+              {
+                step: '03',
+                icon: MessageSquare,
+                title: 'Run turnovers & fixes together',
+                desc: 'Assign cleaners, review photo proofs, handle guest requests, and track repairs in one shared workspace.',
+              },
+            ].map((s) => {
+              const Icon = s.icon;
+              return (
+                <div key={s.step} className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-xs">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center">
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <span className="font-mono text-xs font-bold text-slate-400">{s.step}</span>
+                  </div>
+                  <h3 className="text-base font-bold text-slate-900">{s.title}</h3>
+                  <p className="text-[13px] text-slate-600 mt-1.5 leading-relaxed">{s.desc}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* Authentic Host Testimonials */}
+      <section className="py-14 max-w-7xl mx-auto px-4 sm:px-6">
+        <div className="text-center max-w-xl mx-auto mb-9">
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900">What host teams say</h2>
+          <p className="text-sm text-slate-500 mt-1">
+            Real feedback from operators managing short-term stays every week.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-3 gap-5">
           {[
             {
-              tier: 'Starter',
-              price: '$19',
-              cap: 'Up to 2 properties · 100 AI queries/mo',
-              desc: 'For independent hosts upgrading from static welcome PDFs.',
-              features: [
-                'Mobile-first Digital Welcome Books',
-                'Instant QR code & printable PDF export',
-                'Stay-gated Guest Portal (no app required)',
-                'Basic guest support requests',
-                'Property management & US/AU settings',
-              ],
-              highlight: false,
+              initials: 'MV',
+              name: 'Marcus Vance',
+              location: 'Austin, TX · 9 properties',
+              quote:
+                '“Our weekend check-in texts dropped within two weeks. Guests actually read the parking and gate notes now because it opens right on their phone without installing anything.”',
             },
             {
-              tier: 'Professional',
-              price: '$49',
-              cap: 'Up to 10 properties · 500 AI queries/mo',
-              desc: 'Commercial beachhead for growing hospitality operators.',
-              features: [
-                'Everything in Starter',
-                'Verified-fact AI Guest Assistant',
-                'Cleaning & room-by-room turnover dispatch',
-                'Incident & maintenance work orders',
-                'Team RBAC roles & operational dashboard',
-              ],
-              highlight: true,
+              initials: 'CD',
+              name: 'Camille Laurent',
+              location: 'Lisbon, PT · 14 apartments',
+              quote:
+                '“Having cleaners upload kitchen and thermostat photos before a supervisor approves the unit saves me three drives across town every Sunday afternoon.”',
             },
             {
-              tier: 'Portfolio',
-              price: '$99',
-              cap: 'Up to 25 properties · 2,000 AI queries/mo',
-              desc: 'Standardized multi-property governance & accountability.',
-              features: [
-                'Everything in Professional',
-                'Expanded permissions & multi-team ops',
-                'Pre-arrival & post-departure inspections',
-                'Guidebook template duplication & bulk tools',
-                'Portfolio analytics, backups & audit history',
-              ],
-              highlight: false,
+              initials: 'HR',
+              name: 'Hannah Reid',
+              location: 'Newport, RI · 4 cottages',
+              quote:
+                '“The guest assistant answers routine coffee-maker and checkout questions straight from our guide—and flags me right away if something isn’t documented yet.”',
             },
-          ].map((plan) => (
-            <Card
-              key={plan.tier}
-              className={`p-6 flex flex-col justify-between ${
-                plan.highlight ? 'border-slate-900 ring-1 ring-slate-900' : ''
-              }`}
-            >
-              <div>
-                <div className="flex items-center justify-between">
-                  <h3 className="text-base font-semibold text-slate-900">{plan.tier}</h3>
-                  {plan.highlight && <Badge variant="brand">Most Popular</Badge>}
-                </div>
-                <div className="mt-3 flex items-baseline gap-1">
-                  <span className="text-3xl font-bold tabular-nums text-slate-900">{plan.price}</span>
-                  <span className="text-xs text-slate-500">/ month</span>
-                </div>
-                <div className="text-xs font-medium text-teal-700 mt-1">{plan.cap}</div>
-                <p className="text-[13px] text-slate-600 mt-3">{plan.desc}</p>
-
-                <ul className="mt-5 space-y-2.5 text-[13px] text-slate-700 border-t border-slate-100 pt-4">
-                  {plan.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-teal-700 shrink-0 mt-0.5" />
-                      <span>{f}</span>
-                    </li>
+          ].map((t) => (
+            <div key={t.name} className="p-5 rounded-2xl bg-slate-50/70 border border-slate-200/80 flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="flex items-center gap-0.5 text-amber-400">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <Star key={i} className="w-3.5 h-3.5 fill-amber-400" />
                   ))}
-                </ul>
+                </div>
+                <p className="text-[13px] text-slate-700 leading-relaxed">{t.quote}</p>
               </div>
-
-              <Button
-                className="w-full mt-6"
-                variant={plan.highlight ? 'primary' : 'outline'}
-                onClick={() => onOpenAuth('register', plan.tier)}
-              >
-                Select {plan.tier}
-              </Button>
-            </Card>
+              <div className="flex items-center gap-2.5 mt-4 pt-3 border-t border-slate-200/70">
+                <div className="w-8 h-8 rounded-full bg-slate-900 text-white text-[11px] font-bold flex items-center justify-center">
+                  {t.initials}
+                </div>
+                <div>
+                  <div className="text-xs font-semibold text-slate-900">{t.name}</div>
+                  <div className="text-[11px] text-slate-500">{t.location}</div>
+                </div>
+              </div>
+            </div>
           ))}
         </div>
       </section>
 
-      <footer className="border-t border-slate-200 py-8 bg-slate-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-          <div className="flex items-center gap-2 font-medium text-slate-700">
-            <QrCode className="w-4 h-4 text-teal-700" />
-            STAYWISE — One platform. Every stay. Every task. Every resolution.
+      {/* Pricing */}
+      <section id="pricing" className="py-14 sm:py-16 bg-slate-50/60 border-t border-slate-200/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="text-center max-w-2xl mx-auto mb-10">
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+              Straightforward pricing as your portfolio grows
+            </h2>
+            <p className="text-sm text-slate-600 mt-2">
+              Start with digital welcome books and add AI guest help, turnover checklists, and team workflows whenever you’re ready.
+            </p>
           </div>
-          <div className="flex flex-wrap items-center gap-4">
-            <button onClick={() => onNavigatePath('/privacy')} className="hover:text-slate-900">
-              Privacy Policy
-            </button>
-            <button onClick={() => onNavigatePath('/terms')} className="hover:text-slate-900">
-              Terms of Service
-            </button>
-            <span>US & Australian Hospitality Standards</span>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              {
+                tier: 'Starter',
+                price: '$19',
+                cap: 'Up to 2 properties · 100 AI answers/mo',
+                desc: 'Great for independent hosts replacing static PDFs.',
+                features: [
+                  'Mobile digital welcome books',
+                  'QR code & printable PDF export',
+                  'Stay-gated access codes & Wi-Fi',
+                  'Guest support tickets & ratings',
+                  'Custom local currency, °F/°C & emergency info',
+                ],
+                highlight: false,
+              },
+              {
+                tier: 'Professional',
+                price: '$49',
+                cap: 'Up to 10 properties · 500 AI answers/mo',
+                desc: 'Built for growing teams running weekly turnovers.',
+                features: [
+                  'Everything in Starter',
+                  'Verified-fact AI guest concierge',
+                  'Cleaning & room-by-room photo checklists',
+                  'Maintenance work orders & verification',
+                  'Multi-role team access & live ops board',
+                ],
+                highlight: true,
+              },
+              {
+                tier: 'Portfolio',
+                price: '$99',
+                cap: 'Up to 25 properties · 2,000 AI answers/mo',
+                desc: 'For established operators standardizing across cities.',
+                features: [
+                  'Everything in Professional',
+                  'Pre-arrival & post-stay asset inspections',
+                  'Guidebook template cloning across units',
+                  'Custom automation alerts & audit logs',
+                  'Full organization JSON data export',
+                ],
+                highlight: false,
+              },
+            ].map((plan) => (
+              <Card
+                key={plan.tier}
+                className={`p-6 rounded-2xl flex flex-col justify-between ${
+                  plan.highlight ? 'border-slate-900 ring-1 ring-slate-900 shadow-md' : ''
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-base font-bold text-slate-900">{plan.tier}</h3>
+                    {plan.highlight && <Badge variant="brand">Most Popular</Badge>}
+                  </div>
+                  <div className="mt-3 flex items-baseline gap-1">
+                    <span className="text-3xl font-bold tabular-nums text-slate-900">{plan.price}</span>
+                    <span className="text-xs text-slate-500">/ month</span>
+                  </div>
+                  <div className="text-xs font-medium text-teal-700 mt-1">{plan.cap}</div>
+                  <p className="text-[13px] text-slate-600 mt-3">{plan.desc}</p>
+
+                  <ul className="mt-5 space-y-2.5 text-[13px] text-slate-700 border-t border-slate-100 pt-4">
+                    {plan.features.map((f) => (
+                      <li key={f} className="flex items-start gap-2">
+                        <Check className="w-4 h-4 text-teal-700 shrink-0 mt-0.5" />
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <Button
+                  className="w-full mt-6"
+                  variant={plan.highlight ? 'primary' : 'outline'}
+                  onClick={() => onOpenAuth('register', plan.tier)}
+                >
+                  Choose {plan.tier}
+                </Button>
+              </Card>
+            ))}
           </div>
+        </div>
+      </section>
+
+      {/* Dark Architectural Closing CTA Banner */}
+      <section className="py-12 max-w-7xl mx-auto px-4 sm:px-6">
+        <div className="relative rounded-3xl overflow-hidden bg-slate-900 text-white px-6 py-10 sm:px-12 sm:py-12 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <img
+            src="/images/vista-chino.jpg"
+            alt="Evening pool terrace at a Staywise-managed home"
+            loading="lazy"
+            className="absolute inset-0 w-full h-full object-cover opacity-25"
+          />
+          <div className="relative z-10 max-w-xl space-y-2">
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
+              Ready to give every guest a smoother arrival?
+            </h2>
+            <p className="text-sm text-slate-300">
+              Set up your first property welcome book in minutes and invite your cleaning & maintenance team when you’re ready.
+            </p>
+          </div>
+          <div className="relative z-10 flex flex-wrap items-center gap-3 shrink-0">
+            <Button
+              size="lg"
+              className="bg-white text-slate-900 hover:bg-slate-100 border-white"
+              onClick={() => onOpenAuth('register', 'Professional')}
+            >
+              Start Free Trial
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Multi-Column US SaaS Footer */}
+      <footer className="border-t border-slate-200 py-10 bg-slate-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 grid grid-cols-2 md:grid-cols-4 gap-8 text-xs text-slate-600">
+          <div className="col-span-2 md:col-span-1 space-y-2">
+            <div className="flex items-center gap-2 font-bold text-sm text-slate-900">
+              <QrCode className="w-4 h-4 text-teal-700" />
+              Staywise
+            </div>
+            <p className="text-slate-500 leading-relaxed">
+              Mobile guest welcome books, protected access codes, and field turnover coordination for short-term rentals worldwide.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <div className="font-semibold text-slate-900">Product</div>
+            <ul className="space-y-1.5">
+              <li><a href="#features" className="hover:text-slate-900">Features</a></li>
+              <li><a href="#guidebooks" className="hover:text-slate-900">Welcome Books</a></li>
+              <li><a href="#readiness" className="hover:text-slate-900">Turnover Readiness</a></li>
+              <li><a href="#pricing" className="hover:text-slate-900">Pricing</a></li>
+            </ul>
+          </div>
+
+          <div className="space-y-2">
+            <div className="font-semibold text-slate-900">Live Demos</div>
+            <ul className="space-y-1.5">
+              <li>
+                <a href="/guest/barton-creek-modern?code=STAY-4821" target="_blank" rel="noreferrer" className="hover:text-slate-900">
+                  Unlocked Guest Portal
+                </a>
+              </li>
+              <li>
+                <a href="/guest/barton-creek-modern" target="_blank" rel="noreferrer" className="hover:text-slate-900">
+                  Pre-Arrival View (Locked)
+                </a>
+              </li>
+              <li>
+                <button onClick={() => onOpenAuth('register')} className="hover:text-slate-900">
+                  Create Workspace
+                </button>
+              </li>
+            </ul>
+          </div>
+
+          <div className="space-y-2">
+            <div className="font-semibold text-slate-900">Company & Legal</div>
+            <ul className="space-y-1.5">
+              <li>
+                <button onClick={() => onNavigatePath('/privacy')} className="hover:text-slate-900">
+                  Privacy Policy
+                </button>
+              </li>
+              <li>
+                <button onClick={() => onNavigatePath('/terms')} className="hover:text-slate-900">
+                  Terms of Service
+                </button>
+              </li>
+              <li className="text-slate-400">hello@staywise.app</li>
+            </ul>
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 mt-8 pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-slate-400">
+          <span>© 2026 Staywise Inc. All rights reserved.</span>
+          <span>Built for international hospitality teams</span>
         </div>
       </footer>
     </div>

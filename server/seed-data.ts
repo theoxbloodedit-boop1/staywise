@@ -20,7 +20,7 @@ export function buildDefaultSections(opts: {
   propertyName: string;
   address: string;
   city: string;
-  country: 'US' | 'AU';
+  country: string;
   hostName: string;
   hostPhone: string;
   hostEmail: string;
@@ -46,8 +46,10 @@ export function buildDefaultSections(opts: {
 }) {
   const now = '2026-11-15T09:00:00Z';
   const isAU = opts.country === 'AU';
-  const emergencyNum = isAU ? '000' : '911';
-  const tempEx = opts.tempExample || (isAU ? '22°C' : '72°F');
+  const isMetric = opts.country !== 'US';
+  const emergencyMap: Record<string, string> = { US: '911', CA: '911', GB: '999', EU: '112', AU: '000', INTL: '112' };
+  const emergencyNum = emergencyMap[opts.country] || '112';
+  const tempEx = opts.tempExample || (isMetric ? '22°C' : '72°F');
   const mapQuery = encodeURIComponent(opts.address);
 
   const sections = [
@@ -106,8 +108,8 @@ export function buildDefaultSections(opts: {
         occupancyLimit: 'Strictly enforced per local municipal short-term rental permit.',
         parkingRules: 'Do not block neighboring driveways or fire hydrants. Max 2 vehicles.',
         wasteDisposal: 'Separate general waste from mixed recycling using the labeled kitchen bins.',
-        poolPolicy: isAU
-          ? 'Keep pool safety gate latched at all times. No glass near the deck.'
+        poolPolicy: isMetric
+          ? 'Keep pool safety gate latched at all times. No glass bottles on the deck.'
           : 'No glass bottles on patio or pool deck. Rinse sand/sunscreen before entering spa.',
         customRestrictions: [
           'Do not tamper with exterior security cameras or Wi-Fi router equipment.',
@@ -125,7 +127,7 @@ export function buildDefaultSections(opts: {
         wifiPassword: encryptField(opts.wifiPassword),
         restrictWifiUntilVerified: true,
         acInstructions: `Smart wall thermostat in the main hallway. Recommended comfort setting: ${tempEx}. Please close exterior sliders when cooling/heating is active.`,
-        heatingInstructions: `Switch thermostat mode to HEAT and adjust target temperature between ${isAU ? '19°C–22°C' : '68°F–72°F'}.`,
+        heatingInstructions: `Switch thermostat mode to HEAT and adjust target temperature between ${isMetric ? '19°C–22°C' : '68°F–72°F'}.`,
         tvStreaming: `65" OLED Smart TV in living room. Use the Apple TV / Google TV remote; guest streaming profiles are ready—remember to sign out before checkout.`,
         kitchenAppliances: `Induction cooktop activates only when induction-compatible cookware is centered on the burner. Espresso bar pods are stocked in the top drawer.`,
         washerDryer: `Full-size front-load washer & dryer located in the laundry alcove. Detergent sheets provided above the unit.`,
@@ -148,25 +150,25 @@ export function buildDefaultSections(opts: {
           opts.localPicks || [
             {
               id: `lp-${opts.propertyId}-1`,
-              name: isAU ? 'Rick Shores' : 'Suerte',
+              name: isAU ? 'Rick Shores' : `Corner Bistro ${opts.city}`,
               category: 'Restaurants',
               description: isAU
-                ? 'Iconic beachfront Pan-Asian dining famous for the Moreton Bay bug roll.'
-                : 'Wood-fired seasonal Mexican kitchen with house-nixtamalized masa.',
-              address: isAU ? '43 Goodwin Terrace, Burleigh Heads QLD' : '1800 E 6th St, Austin, TX',
+                ? 'Iconic waterfront Pan-Asian dining overlooking the coastline.'
+                : `Neighborhood wood-fired kitchen and seasonal plates in ${opts.city}.`,
+              address: isAU ? '43 Goodwin Terrace, Burleigh Heads' : `Central District, ${opts.city}`,
               website: 'https://example.com',
-              mapLink: `https://maps.google.com/?q=${encodeURIComponent(opts.city)}`,
+              mapLink: `https://maps.google.com/?q=${encodeURIComponent(opts.city + ' restaurant')}`,
               phone: opts.hostPhone,
               isOwnerPick: true,
             },
             {
               id: `lp-${opts.propertyId}-2`,
-              name: isAU ? 'Paddock Bakery' : 'Mañana Coffee',
+              name: isAU ? 'Paddock Bakery' : `Morning Roast ${opts.city}`,
               category: 'Cafes',
               description: isAU
                 ? 'Heritage weatherboard cottage bakery serving wood-fired sourdough and specialty espresso.'
                 : 'Neighborhood espresso bar with house pastries and sunny courtyard.',
-              address: isAU ? '20 Hibiscus Haven, Miami QLD' : '1603 S Congress Ave, Austin, TX',
+              address: isAU ? '20 Hibiscus Haven, Miami' : `Main Square, ${opts.city}`,
               website: 'https://example.com',
               mapLink: `https://maps.google.com/?q=${encodeURIComponent(opts.city + ' cafe')}`,
               phone: opts.hostPhone,
@@ -174,7 +176,7 @@ export function buildDefaultSections(opts: {
             },
             {
               id: `lp-${opts.propertyId}-3`,
-              name: isAU ? 'Woolworths Metro & Organic Grocer' : 'Whole Foods Market',
+              name: `Central Market & Grocer`,
               category: 'Supermarkets',
               description: 'Full fresh produce, pantry staples, and prepared meals within 6 minutes.',
               address: `Central ${opts.city}`,
@@ -185,7 +187,7 @@ export function buildDefaultSections(opts: {
             },
             {
               id: `lp-${opts.propertyId}-4`,
-              name: isAU ? 'Chemist Warehouse' : 'CVS Pharmacy 24hr',
+              name: `24hr Local Pharmacy`,
               category: 'Pharmacies',
               description: 'Prescription pickup, travel essentials, and first-aid supplies.',
               address: `Main Ave, ${opts.city}`,
@@ -205,8 +207,8 @@ export function buildDefaultSections(opts: {
         primaryNumber: emergencyNum,
         managerEmergencyPhone: opts.hostPhone,
         maintenanceEmergencyPhone: opts.emergencyPhone || opts.hostPhone,
-        nearestHospital: opts.hospitalName || (isAU ? 'Gold Coast University Hospital' : 'St. David’s Medical Center'),
-        hospitalAddress: isAU ? '1 Hospital Blvd, Southport QLD 4215' : `Central Medical District, ${opts.city}`,
+        nearestHospital: opts.hospitalName || `${opts.city} Regional Medical Center`,
+        hospitalAddress: `Central Medical District, ${opts.city}`,
         fireProcedure: `Evacuate immediately via front or rear patio exits. Call ${emergencyNum} once outside at a safe distance. Fire extinguisher is stored under the kitchen sink.`,
         electricalProcedure: `Main breaker panel is located inside the garage/utility hallway. Do not touch exposed wiring or standing water; report immediately.`,
         waterShutoffProcedure: `Main water shutoff valve is on the exterior side wall near the hose bib (turn clockwise 90°). Report leaks immediately via Guest Support.`,
@@ -219,19 +221,13 @@ export function buildDefaultSections(opts: {
       title: 'Getting Around',
       sort_order: 6,
       content: {
-        airportDirections: isAU
-          ? '22 minutes north from Gold Coast Airport (OOL) via Gold Coast Hwy.'
-          : `20 minutes from ${opts.city} International Airport via main expressway.`,
-        publicTransit: isAU
-          ? 'G:link Light Rail & Surfside Bus lines operate 5 minutes walk from the property.'
-          : 'Rapid transit bus stop and bike-share dock located 2 blocks east.',
-        taxiRideshare: `Uber, Lyft${isAU ? ', DiDi, and 13cabs' : ''} operate 24/7 with pickup directly at ${opts.address}.`,
-        parkingDetails: `Use driveway spaces only. EV Level-2 J1772 wall connector available on request.`,
+        airportDirections: `20–25 minutes from ${opts.city} Airport via the main coastal/city expressway.`,
+        publicTransit: `Local transit and shuttle stops operate within 5 minutes walking distance.`,
+        taxiRideshare: `Rideshare and licensed local taxis operate 24/7 with pickup directly at ${opts.address}.`,
+        parkingDetails: `Use driveway spaces only. EV Level-2 wall connector available on request.`,
         carRental: `Major airport & neighborhood rental counters operate 6:00 AM – 11:00 PM.`,
         nearbyStations: `Nearest transit hub within 0.6 miles / 1 km.`,
-        drivingNotes: isAU
-          ? 'Remember: Drive on the LEFT in Australia. Speed cameras are strictly enforced.'
-          : 'Watch for neighborhood school zones and posted residential speed limits.',
+        drivingNotes: `Observe posted residential speed limits and neighborhood parking signs.`,
       },
     },
     {
@@ -244,7 +240,7 @@ export function buildDefaultSections(opts: {
         wasteInstructions: 'Tie kitchen garbage bags and place in exterior wheeled bins (General Waste / Recycling).',
         dishwasherInstructions: 'Load remaining dishes and start the dishwasher on Normal cycle.',
         laundryInstructions: 'Leave used bath towels in the shower tub or hamper; no need to strip beds.',
-        lightsEquipment: `Turn off interior lights, patio heaters, and set thermostat to ${isAU ? '24°C' : '74°F'} Eco.`,
+        lightsEquipment: `Turn off interior lights, patio heaters, and set thermostat to ${isMetric ? '24°C' : '74°F'} Eco.`,
         closingChecklist: [
           'Verify all windows and sliding glass doors are latched and locked.',
           'Check bedside drawers, outlets, and bathroom hooks for chargers or personal items.',
@@ -434,7 +430,7 @@ export async function seedIfEmpty(db: DbExecutor) {
     2,
     6,
     '/images/tallebudgera.webp',
-    'Timber-clad Australian coastal sanctuary overlooking calm creek waters with breezy open pavilion living.',
+    'Timber-clad coastal sanctuary overlooking calm creek waters with breezy open pavilion living.',
     JSON.stringify(['NBN Fibre Wi-Fi', 'Ducted Air Conditioning', 'Outdoor Rain Shower', 'Kayaks Included', 'Induction Kitchen', 'Smart Lock']),
     'Covered timber carport for 2 vehicles.',
     'Yale Assure SL keypad on boardwalk entry.',
@@ -545,10 +541,10 @@ export async function seedIfEmpty(db: DbExecutor) {
       orgId: 'org-sunbelt',
       propertyId: 'prop-tallebudgera',
       propertyName: 'Tallebudgera Creek House',
-      address: '48 Trees Road, Gold Coast QLD 4228, Australia',
+      address: '48 Trees Road, Gold Coast QLD 4228',
       city: 'Gold Coast',
-      country: 'AU' as const,
-      hostName: 'Sunbelt Australia Host Team',
+      country: 'AU',
+      hostName: 'Tallebudgera Host Team',
       hostPhone: '+61 7 5550 8412',
       hostEmail: 'goldcoast@sunbeltstays.com',
       wifiNetwork: 'TalleCreek_NBN',

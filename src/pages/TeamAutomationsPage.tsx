@@ -32,7 +32,7 @@ export function TeamPage({ orgId, onRefreshContext }: { orgId: string; onRefresh
         body: JSON.stringify({ name, email, role }),
       });
       setInviteOpen(false);
-      setInviteNotice(`Invited ${name} (${email}) as ${role}. They can sign up via Neon Auth with this email to join automatically.`);
+      setInviteNotice(`Invited ${name} (${email}) as ${role}. They can sign up with this email to join your workspace automatically.`);
       setTimeout(() => setInviteNotice(''), 6000);
       setName('');
       setEmail('');
@@ -46,8 +46,8 @@ export function TeamPage({ orgId, onRefreshContext }: { orgId: string; onRefresh
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Team, Concierge & RBAC Permissions"
-        description="Assign role-based permissions and property scopes. Employees only see modules and units required for their role."
+        title="Team & Permissions"
+        description="Assign team roles and property access. Staff only see the tools and homes assigned to them."
         actions={
           <div className="flex items-center gap-2">
             {inviteNotice && (
@@ -68,7 +68,7 @@ export function TeamPage({ orgId, onRefreshContext }: { orgId: string; onRefresh
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50/70 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                 <th className="py-2.5 px-4">Team Member</th>
-                <th className="py-2.5 px-4">RBAC Role</th>
+                <th className="py-2.5 px-4">Role</th>
                 <th className="py-2.5 px-4">Property Scope</th>
                 <th className="py-2.5 px-4">Task Performance</th>
                 <th className="py-2.5 px-4">Status</th>
@@ -103,7 +103,7 @@ export function TeamPage({ orgId, onRefreshContext }: { orgId: string; onRefresh
                     <div className="flex items-center gap-1.5">
                       <Badge variant="success">{m.status}</Badge>
                       {m.neon_linked ? (
-                        <Badge variant="neutral">Neon Auth Linked</Badge>
+                        <Badge variant="neutral">Verified Account</Badge>
                       ) : (
                         <Badge variant="warning">Pending Sign-In</Badge>
                       )}

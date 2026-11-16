@@ -235,7 +235,7 @@ export function GuidebookStudioPage({
             >
               <option value="/images/barton-creek.jpg">Mid-Century Living Pavilion</option>
               <option value="/images/vista-chino.jpg">Desert Courtyard & Pool</option>
-              <option value="/images/tallebudgera.webp">Australian Coastal Timber</option>
+              <option value="/images/tallebudgera.webp">Coastal Timber House</option>
               <option value="/images/timberline-ridge.jpg">Alpine Cedar Cabin</option>
               <option value="/images/timberline-interior.jpg">Timber Great Room</option>
               <option value="/images/newport-harbor.webp">Harbor Shingle Architecture</option>

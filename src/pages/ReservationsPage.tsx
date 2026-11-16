@@ -93,7 +93,7 @@ export function ReservationsPage({ orgId }: { orgId: string }) {
               <tr className="border-b border-slate-200 bg-slate-50/70 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                 <th className="py-2.5 px-4">Guest & Stay</th>
                 <th className="py-2.5 px-4">Property</th>
-                <th className="py-2.5 px-4">Dates (US/AU Local)</th>
+                <th className="py-2.5 px-4">Local Dates</th>
                 <th className="py-2.5 px-4">Access Code</th>
                 <th className="py-2.5 px-4">Check-In / Out</th>
                 <th className="py-2.5 px-4">Rules Ack</th>

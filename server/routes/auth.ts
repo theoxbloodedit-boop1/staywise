@@ -186,8 +186,25 @@ authRouter.post(
       .toUpperCase();
 
     const now = nowIso();
-    const safeCountry = country === 'AU' ? 'AU' : 'US';
-    const currency = safeCountry === 'AU' ? 'AUD' : 'USD';
+    const CURRENCY_BY_REGION: Record<string, string> = {
+      US: 'USD',
+      CA: 'CAD',
+      GB: 'GBP',
+      EU: 'EUR',
+      AU: 'AUD',
+      INTL: 'USD',
+    };
+    const PHONE_BY_REGION: Record<string, string> = {
+      US: '+1 (555) 010-0100',
+      CA: '+1 (416) 555-0100',
+      GB: '+44 20 7946 0100',
+      EU: '+33 1 42 68 55 00',
+      AU: '+61 400 000 000',
+      INTL: '+1 (555) 010-0100',
+    };
+    const rawCountry = String(country || 'US').toUpperCase();
+    const safeCountry = CURRENCY_BY_REGION[rawCountry] ? rawCountry : 'US';
+    const currency = CURRENCY_BY_REGION[safeCountry];
     const invoiceNum = `INV-${new Date().getUTCFullYear()}-${Math.floor(1000 + Math.random() * 8999)}`;
 
     let userId = '';
@@ -222,7 +239,7 @@ authRouter.post(
           String(orgName).trim(),
           slug,
           neonUser.email,
-          contactPhone || (safeCountry === 'AU' ? '+61 400 000 000' : '+1 (555) 010-0100'),
+          contactPhone || PHONE_BY_REGION[safeCountry],
           safeCountry,
           chosenPlan,
           limit,

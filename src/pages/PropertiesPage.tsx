@@ -13,9 +13,10 @@ import {
   Settings2,
 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
+import { REGION_PRESETS } from '../lib/format';
 import { Badge, Button, Card, Input, Modal, PageHeader, Select, TextArea, statusToBadgeVariant } from '../components/ui';
 import { QRModal } from '../components/QRModal';
-import type { Organization, Property } from '../lib/types';
+import type { Organization, Property, RegionCode } from '../lib/types';
 
 export function PropertiesPage({
   org,
@@ -39,7 +40,7 @@ export function PropertiesPage({
   const [city, setCity] = useState('');
   const [stateCode, setStateCode] = useState('');
   const [postalCode, setPostalCode] = useState('');
-  const [country, setCountry] = useState<'US' | 'AU'>('US');
+  const [country, setCountry] = useState<RegionCode>('US');
   const [bedrooms, setBedrooms] = useState('3');
   const [bathrooms, setBathrooms] = useState('2');
   const [maxOccupancy, setMaxOccupancy] = useState('6');
@@ -154,7 +155,7 @@ export function PropertiesPage({
     <div className="space-y-5">
       <PageHeader
         title="Property Portfolio"
-        description="Each property maintains isolated guestbooks, US/AU jurisdiction formatting, access instructions, and readiness history."
+        description="Each property maintains its own welcome book, regional formatting, access details, and readiness log."
         actions={
           <div className="flex items-center gap-2.5">
             {org && (
@@ -279,7 +280,7 @@ export function PropertiesPage({
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         title={editing ? `Edit ${editing.name}` : 'Add New Property'}
-        subtitle="Automatically creates an isolated Welcome Book adapted to US or Australian standards."
+        subtitle="Automatically generates a Welcome Book matched to your property’s local standards."
         maxWidth="max-w-xl"
       >
         {error && (
@@ -297,30 +298,33 @@ export function PropertiesPage({
             <Input
               label="Property Name"
               required
-              placeholder="e.g., Bondi Pavilion Suite"
+              placeholder="e.g., Oakwood Garden Loft"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
             <Select
-              label="Market & Legal Jurisdiction"
+              label="Region & Standards"
               value={country}
-              onChange={(e) => setCountry(e.target.value as 'US' | 'AU')}
+              onChange={(e) => setCountry(e.target.value as RegionCode)}
             >
-              <option value="US">United States (USD · °F · 911)</option>
-              <option value="AU">Australia (AUD · °C · 000)</option>
+              {(Object.keys(REGION_PRESETS) as RegionCode[]).map((code) => (
+                <option key={code} value={code}>
+                  {REGION_PRESETS[code].label}
+                </option>
+              ))}
             </Select>
           </div>
           <Input
             label="Street Address"
             required
-            placeholder={country === 'AU' ? '48 Campbell Parade' : '742 Evergreen Terrace'}
+            placeholder="742 Evergreen Terrace"
             value={addressLine}
             onChange={(e) => setAddressLine(e.target.value)}
           />
           <div className="grid grid-cols-3 gap-3">
-            <Input label="City / Suburb" required value={city} onChange={(e) => setCity(e.target.value)} />
-            <Input label="State" required placeholder={country === 'AU' ? 'NSW' : 'TX'} value={stateCode} onChange={(e) => setStateCode(e.target.value)} />
-            <Input label={country === 'AU' ? 'Postcode' : 'ZIP Code'} required value={postalCode} onChange={(e) => setPostalCode(e.target.value)} />
+            <Input label="City" required value={city} onChange={(e) => setCity(e.target.value)} />
+            <Input label="State / Region" required placeholder="TX / ON / IDF" value={stateCode} onChange={(e) => setStateCode(e.target.value)} />
+            <Input label={REGION_PRESETS[country].postalLabel} required value={postalCode} onChange={(e) => setPostalCode(e.target.value)} />
           </div>
           <div className="grid grid-cols-3 gap-3">
             <Input label="Bedrooms" type="number" min="0" value={bedrooms} onChange={(e) => setBedrooms(e.target.value)} />

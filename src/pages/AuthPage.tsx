@@ -12,7 +12,8 @@ import {
   neonSignUp,
 } from '../lib/neonAuth';
 import { Button, Card, Input, Select } from '../components/ui';
-import type { SessionContext } from '../lib/types';
+import { REGION_PRESETS } from '../lib/format';
+import type { RegionCode, SessionContext } from '../lib/types';
 
 export function AuthPage({
   initialMode = 'login',
@@ -40,7 +41,7 @@ export function AuthPage({
   const [ownerName, setOwnerName] = useState(onboardingUser?.name || '');
   const [email, setEmail] = useState(onboardingUser?.email || '');
   const [password, setPassword] = useState('');
-  const [country, setCountry] = useState<'US' | 'AU'>('US');
+  const [country, setCountry] = useState<RegionCode>('US');
   const [planTier, setPlanTier] = useState(defaultPlan);
   const [acceptedLegal, setAcceptedLegal] = useState(false);
 
@@ -207,7 +208,7 @@ export function AuthPage({
           onClick={onBack}
           className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900"
         >
-          <ArrowLeft className="w-3.5 h-3.5" /> Back to STAYWISE overview
+          <ArrowLeft className="w-3.5 h-3.5" /> Back to Staywise
         </button>
 
         <Card className="p-6">
@@ -219,17 +220,19 @@ export function AuthPage({
               <div>
                 <h1 className="text-base font-bold text-slate-900">
                   {mode === 'onboard'
-                    ? 'Complete Organization Setup'
+                    ? 'Set Up Your Workspace'
                     : mode === 'register'
-                      ? 'Create Your STAYWISE Account'
+                      ? 'Create Your Staywise Account'
                       : mode === 'login'
-                        ? 'Sign in to STAYWISE'
+                        ? 'Welcome back'
                         : 'Password Recovery'}
                 </h1>
                 <p className="text-xs text-slate-500">
                   {mode === 'onboard'
-                    ? `Signed in as ${email} — provision your tenant workspace`
-                    : 'Authenticated via Neon Auth (JWT + JWKS verification)'}
+                    ? `Signed in as ${email} — name your team workspace to begin`
+                    : mode === 'register'
+                      ? 'Start managing welcome books and turnovers in minutes'
+                      : 'Sign in to your Staywise team workspace'}
                 </p>
               </div>
             </div>
@@ -330,12 +333,15 @@ export function AuthPage({
                 />
                 <div className="grid grid-cols-2 gap-3">
                   <Select
-                    label="Primary Market"
+                    label="Primary Region"
                     value={country}
-                    onChange={(e) => setCountry(e.target.value as 'US' | 'AU')}
+                    onChange={(e) => setCountry(e.target.value as RegionCode)}
                   >
-                    <option value="US">United States (USD / 911)</option>
-                    <option value="AU">Australia (AUD / 000)</option>
+                    {(Object.keys(REGION_PRESETS) as RegionCode[]).map((code) => (
+                      <option key={code} value={code}>
+                        {REGION_PRESETS[code].label}
+                      </option>
+                    ))}
                   </Select>
                   <Select
                     label="Subscription Plan"
@@ -443,13 +449,13 @@ export function AuthPage({
 
             <Button type="submit" variant="primary" className="w-full" disabled={loading}>
               {loading
-                ? 'Authenticating...'
+                ? 'Signing in...'
                 : mode === 'onboard'
-                  ? 'Provision Organization & Enter Workspace'
+                  ? 'Create Workspace & Continue'
                   : mode === 'register'
                     ? 'Create Account & Workspace'
                     : mode === 'login'
-                      ? 'Sign In with Neon Auth'
+                      ? 'Sign In'
                       : mode === 'forgot'
                         ? 'Send Reset Link'
                         : 'Update Password'}
@@ -472,7 +478,7 @@ export function AuthPage({
 
           <div className="mt-4 pt-4 border-t border-slate-100 flex items-center gap-2 text-[11px] text-slate-500">
             <CheckCircle2 className="w-3.5 h-3.5 text-teal-700 shrink-0" />
-            Protected by Neon Auth EdDSA/JWKS · Smart-lock secrets AES-256-GCM encrypted in Neon PostgreSQL.
+            Encrypted session authentication · Door PINs & Wi-Fi stored with AES-256 encryption.
           </div>
         </Card>
       </div>
