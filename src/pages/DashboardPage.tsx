@@ -282,12 +282,39 @@ export function DashboardPage({
           </div>
           <div className="grid sm:grid-cols-2 gap-3.5">
             {[
-              { label: 'Property Readiness Rate', value: `${an.readinessRate}%`, icon: CheckCircle2 },
-              { label: 'Cleaning Completion Rate', value: `${an.cleaningCompletionRate}%`, icon: Sparkles },
-              { label: 'Avg Incident Resolution Time', value: `${an.avgResolutionHours || '—'} hrs`, icon: Wrench },
-              { label: 'AI Question Deflection Rate', value: `${an.aiDeflectionRate}%`, icon: Bot },
-              { label: 'Guest Inquiry Volume', value: `${an.guestInquiryVolume} msgs`, icon: MessageSquare },
-              { label: 'Avg Guest Satisfaction', value: `${an.avgFeedbackScore} / 5.0`, icon: CheckCircle2 },
+              {
+                label: 'Property Readiness Rate',
+                value: an.readinessRate === null || an.readinessRate === undefined ? '—' : `${an.readinessRate}%`,
+                icon: CheckCircle2,
+              },
+              {
+                label: 'Cleaning Completion Rate',
+                value:
+                  an.cleaningCompletionRate === null || an.cleaningCompletionRate === undefined
+                    ? '—'
+                    : `${an.cleaningCompletionRate}%`,
+                icon: Sparkles,
+              },
+              {
+                label: 'Avg Incident Resolution Time',
+                value: an.avgResolutionHours === null || an.avgResolutionHours === undefined ? '—' : `${an.avgResolutionHours} hrs`,
+                icon: Wrench,
+              },
+              {
+                label: 'AI Question Deflection Rate',
+                value:
+                  an.aiDeflectionRate === null || an.aiDeflectionRate === undefined ? '—' : `${an.aiDeflectionRate}%`,
+                icon: Bot,
+              },
+              { label: 'Guest Inquiry Volume', value: `${an.guestInquiryVolume ?? 0} msgs`, icon: MessageSquare },
+              {
+                label: 'Avg Guest Satisfaction',
+                value:
+                  an.avgFeedbackScore === null || an.avgFeedbackScore === undefined
+                    ? '—'
+                    : `${an.avgFeedbackScore} / 5.0`,
+                icon: CheckCircle2,
+              },
             ].map((m) => {
               const Icon = m.icon;
               return (

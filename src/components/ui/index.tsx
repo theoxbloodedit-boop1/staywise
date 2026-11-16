@@ -98,7 +98,7 @@ export function Button({
   className,
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'inverted';
   size?: 'sm' | 'md' | 'lg';
 }) {
   const variants = {
@@ -107,6 +107,7 @@ export function Button({
     outline: 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200',
     ghost: 'bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent',
     danger: 'bg-red-600 text-white hover:bg-red-700 border border-red-600',
+    inverted: 'bg-white text-slate-900 hover:bg-slate-100 border border-white shadow-xs',
   };
   const sizes = {
     sm: 'h-8 px-2.5 text-xs',

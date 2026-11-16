@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import crypto from 'crypto';
 import { db } from '../db.js';
 import {
   ah,
@@ -52,7 +53,11 @@ reservationsRouter.post(
     if (!prop) return res.status(404).json({ error: 'Property not found in organization.' });
 
     const id = uid('res');
-    const accessCode = `STAY-${Math.floor(1000 + Math.random() * 8999)}`;
+    const alphabet = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const bytes = crypto.randomBytes(8);
+    let suffix = '';
+    for (let i = 0; i < 8; i++) suffix += alphabet[bytes[i] % alphabet.length];
+    const accessCode = `STAY-${suffix}`;
     const now = nowIso();
 
     await db.execute(

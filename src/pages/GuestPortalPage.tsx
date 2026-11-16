@@ -298,18 +298,45 @@ export function GuestPortalPage({ slug }: { slug: string }) {
     }
   };
 
+  const coverSrc: string = guidebook?.cover_image || property.cover_image || '';
+  const localStemMatch = coverSrc.match(/^\/images\/([a-z0-9-]+)\.(jpg|jpeg|png|webp)$/i);
+  const localStem = localStemMatch ? localStemMatch[1] : null;
+
   return (
     <div className="min-h-screen bg-slate-100 pb-20">
       {/* Mobile-first Centered Shell */}
       <div className="max-w-xl mx-auto min-h-screen bg-white shadow-sm border-x border-slate-200 flex flex-col">
         {/* Hero Cover */}
         <div className="relative h-52 bg-slate-900 shrink-0">
-          <img
-            src={guidebook?.cover_image || property.cover_image}
-            alt={`${guidebook?.brand_name || property.name} welcome book cover photo`}
-            loading="lazy"
-            className="w-full h-full object-cover opacity-85"
-          />
+          {localStem ? (
+            <picture>
+              <source
+                type="image/avif"
+                srcSet={`/images/${localStem}-640.avif 640w, /images/${localStem}-1280.avif 1280w`}
+                sizes="(max-width: 640px) 100vw, 576px"
+              />
+              <source
+                type="image/webp"
+                srcSet={`/images/${localStem}-640.webp 640w, /images/${localStem}-1280.webp 1280w`}
+                sizes="(max-width: 640px) 100vw, 576px"
+              />
+              <img
+                src={coverSrc}
+                alt={`${guidebook?.brand_name || property.name} welcome book cover photo`}
+                fetchPriority="high"
+                width={640}
+                height={427}
+                className="w-full h-full object-cover opacity-85"
+              />
+            </picture>
+          ) : (
+            <img
+              src={coverSrc}
+              alt={`${guidebook?.brand_name || property.name} welcome book cover photo`}
+              fetchPriority="high"
+              className="w-full h-full object-cover opacity-85"
+            />
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-900/30 to-transparent" />
           <div className="absolute top-3.5 left-4 right-4 flex items-center justify-between">
             <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-white/95 text-slate-900">

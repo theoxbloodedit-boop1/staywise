@@ -15,6 +15,7 @@ import { incidentsRouter } from './routes/incidents.js';
 import { inspectionsRouter } from './routes/inspections.js';
 import { guestRouter } from './routes/guest.js';
 import { adminRouter } from './routes/admin.js';
+import { APP_SHELL_HTML, NOT_FOUND_HTML, ROUTE_HTML } from './generated-shell.js';
 
 export const app = express();
 app.set('trust proxy', 1);
@@ -35,7 +36,7 @@ if (isProd && process.env.FORCE_HTTPS !== 'false') {
 // Security Headers (compatible with Neon Auth endpoints, Vercel Blob, and bundled local assets)
 app.use(
   helmet({
-    frameguard: false,
+    frameguard: isProd ? { action: 'deny' } : false,
     crossOriginEmbedderPolicy: false,
     crossOriginOpenerPolicy: false,
     hsts: isProd ? { maxAge: 31536000, includeSubDomains: true } : false,
@@ -52,7 +53,7 @@ app.use(
             objectSrc: ["'none'"],
             baseUri: ["'self'"],
             formAction: ["'self'"],
-            frameAncestors: null,
+            frameAncestors: ["'none'"],
             upgradeInsecureRequests: null,
           },
         }
@@ -88,7 +89,7 @@ app.get('/robots.txt', (req, res) => {
   res
     .type('text/plain')
     .send(
-      `User-agent: *\nAllow: /\nAllow: /privacy\nAllow: /terms\nDisallow: /app/\nDisallow: /auth\nDisallow: /guest/\nDisallow: /print/\nDisallow: /api/\nDisallow: /uploads/\n\nSitemap: ${origin}/sitemap.xml\n`
+      `User-agent: *\nAllow: /\nAllow: /features\nAllow: /pricing\nAllow: /security\nAllow: /privacy\nAllow: /terms\nDisallow: /app/\nDisallow: /auth\nDisallow: /guest/\nDisallow: /print/\nDisallow: /api/\nDisallow: /uploads/\n\nSitemap: ${origin}/sitemap.xml\n`
     );
 });
 
@@ -97,19 +98,14 @@ app.get('/sitemap.xml', (req, res) => {
   res
     .type('application/xml')
     .send(
-      `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>${origin}/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>\n  <url><loc>${origin}/privacy</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>\n  <url><loc>${origin}/terms</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>\n</urlset>\n`
+      `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>${origin}/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>\n  <url><loc>${origin}/features</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>\n  <url><loc>${origin}/pricing</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>\n  <url><loc>${origin}/security</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>\n  <url><loc>${origin}/privacy</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>\n  <url><loc>${origin}/terms</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>\n</urlset>\n`
     );
 });
 
-// Health & deployment readiness probe (never requires DB connection to respond)
+// Minimal public health probe (never exposes internal config flags)
 app.get('/api/health', (_req, res) => {
   res.json({
     status: 'ok',
-    service: 'STAYWISE API',
-    runtime: process.env.VERCEL ? 'vercel-serverless' : 'node',
-    databaseConfigured: isDatabaseConfigured(),
-    neonAuthConfigured: Boolean(getNeonAuthBaseUrl()),
-    blobStorageConfigured: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
     timestamp: new Date().toISOString(),
   });
 });
@@ -211,7 +207,17 @@ app.use('/api/*', (_req, res) => {
 
 export function isKnownSpaRoute(urlPath: string): boolean {
   const clean = urlPath.split('?')[0];
-  if (clean === '/' || clean === '/auth' || clean === '/privacy' || clean === '/terms') return true;
+  if (
+    clean === '/' ||
+    clean === '/features' ||
+    clean === '/pricing' ||
+    clean === '/security' ||
+    clean === '/auth' ||
+    clean === '/privacy' ||
+    clean === '/terms'
+  ) {
+    return true;
+  }
   if (/^\/guest\/[^/]+$/.test(clean)) return true;
   if (/^\/print\/[^/]+$/.test(clean)) return true;
   const knownAppPaths = [
@@ -243,7 +249,36 @@ export function isNoIndexRoute(urlPath: string): boolean {
 }
 
 export function injectNoIndexMeta(html: string): string {
+  if (html.includes('name="robots"')) return html;
   return html.replace('</head>', '  <meta name="robots" content="noindex, nofollow, noarchive" />\n  </head>');
+}
+
+export function serveSpaOr404(req: express.Request, res: express.Response) {
+  const clean = req.path.replace(/\/+$/, '') || '/';
+  if (/^\/(assets|images)\//.test(req.path)) {
+    return res.status(404).type('text/plain').send('Asset not found');
+  }
+  const known = isKnownSpaRoute(clean);
+  const shouldNoIndex = !known || isNoIndexRoute(clean);
+  if (shouldNoIndex) {
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
+  }
+  res.setHeader('Cache-Control', 'no-cache');
+
+  if (!known) {
+    return res
+      .status(404)
+      .type('text/html')
+      .send(NOT_FOUND_HTML || '<!doctype html><html><head><meta name="robots" content="noindex, nofollow" /><title>404 Not Found | Staywise</title></head><body><h1>Page not found</h1><p><a href="/">Return home</a></p></body></html>');
+  }
+
+  const html = ROUTE_HTML[clean] || APP_SHELL_HTML;
+  return res.status(200).type('text/html').send(html);
+}
+
+// In Vercel serverless mode, serve dynamic SPA routes (/app*, /guest/*, /print/*) & real HTTP 404s
+if (process.env.VERCEL === '1') {
+  app.get('*', serveSpaOr404);
 }
 
 // Structured JSON error handler

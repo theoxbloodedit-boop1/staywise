@@ -17,7 +17,7 @@ import type { RegionCode, SessionContext } from '../lib/types';
 
 export function AuthPage({
   initialMode = 'login',
-  defaultPlan = 'Professional',
+  defaultPlan = 'Starter',
   onboardingUser = null,
   onBack,
   onNavigate,
@@ -37,12 +37,22 @@ export function AuthPage({
   );
   const [neonReady, setNeonReady] = useState(() => isNeonAuthConfigured());
 
+  const resolveInitialPlan = () => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search).get('plan');
+      if (p === 'Starter' || p === 'Professional' || p === 'Portfolio') return p;
+    }
+    return defaultPlan === 'Starter' || defaultPlan === 'Professional' || defaultPlan === 'Portfolio'
+      ? defaultPlan
+      : 'Starter';
+  };
+
   const [orgName, setOrgName] = useState('');
   const [ownerName, setOwnerName] = useState(onboardingUser?.name || '');
   const [email, setEmail] = useState(onboardingUser?.email || '');
   const [password, setPassword] = useState('');
   const [country, setCountry] = useState<RegionCode>('US');
-  const [planTier, setPlanTier] = useState(defaultPlan);
+  const [planTier, setPlanTier] = useState<string>(resolveInitialPlan);
   const [acceptedLegal, setAcceptedLegal] = useState(false);
 
   const [resetToken, setResetToken] = useState(() => {
@@ -56,6 +66,12 @@ export function AuthPage({
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (defaultPlan === 'Starter' || defaultPlan === 'Professional' || defaultPlan === 'Portfolio') {
+      setPlanTier(defaultPlan);
+    }
+  }, [defaultPlan]);
 
   useEffect(() => {
     if (onboardingUser) {
@@ -78,18 +94,9 @@ export function AuthPage({
           setNeonReady(true);
         }
       })
-      .catch(async (err) => {
+      .catch((err) => {
         if (err?.code === 'DATABASE_NOT_CONFIGURED') {
           setDbMissing(true);
-        }
-        try {
-          const health = await apiFetch('/api/health');
-          if (health && health.databaseConfigured === false) setDbMissing(true);
-          if (health?.neonAuthConfigured && !isNeonAuthConfigured()) {
-            // Backend has NEON_AUTH_BASE_URL configured
-          }
-        } catch {
-          // ignore
         }
       });
   }, []);
@@ -344,13 +351,13 @@ export function AuthPage({
                     ))}
                   </Select>
                   <Select
-                    label="Subscription Plan"
+                    label="Early Access Tier (Free in Alpha)"
                     value={planTier}
                     onChange={(e) => setPlanTier(e.target.value)}
                   >
-                    <option value="Starter">Starter ($19 · 2 units)</option>
-                    <option value="Professional">Professional ($49 · 10 units)</option>
-                    <option value="Portfolio">Portfolio ($99 · 25 units)</option>
+                    <option value="Starter">Starter (2 units · Free in Alpha)</option>
+                    <option value="Professional">Professional (10 units · Free in Alpha)</option>
+                    <option value="Portfolio">Portfolio (25 units · Free in Alpha)</option>
                   </Select>
                 </div>
               </>

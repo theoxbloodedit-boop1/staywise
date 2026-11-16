@@ -4,7 +4,7 @@ import http from 'http';
 import path from 'path';
 import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
-import { app, injectNoIndexMeta, isKnownSpaRoute, isNoIndexRoute } from './app.js';
+import { app, injectNoIndexMeta, isKnownSpaRoute, isNoIndexRoute, serveSpaOr404 } from './app.js';
 
 // Local static images directory (Vercel serves public/images directly from dist/images via CDN)
 app.use(
@@ -21,31 +21,22 @@ const PORT = Number(process.env.PORT || 3000);
 async function start() {
   if (process.env.NODE_ENV === 'production') {
     const distDir = path.resolve(process.cwd(), 'dist');
-    const indexHtmlTemplate = fs.readFileSync(path.join(distDir, 'index.html'), 'utf-8');
     app.use(
       express.static(distDir, {
-        index: false,
+        extensions: ['html'],
+        index: 'index.html',
         maxAge: '7d',
         setHeaders: (res, filePath) => {
-          if (filePath.endsWith('index.html')) {
+          if (filePath.endsWith('.html')) {
             res.setHeader('Cache-Control', 'no-cache');
+          }
+          if (filePath.endsWith(`${path.sep}auth.html`)) {
+            res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
           }
         },
       })
     );
-    app.get('*', (req, res) => {
-      if (/^\/(assets|images)\//.test(req.path)) {
-        return res.status(404).type('text/plain').send('Asset not found');
-      }
-      const status = isKnownSpaRoute(req.path) ? 200 : 404;
-      const shouldNoIndex = status === 404 || isNoIndexRoute(req.path);
-      if (shouldNoIndex) {
-        res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
-      }
-      res.setHeader('Cache-Control', 'no-cache');
-      const html = shouldNoIndex ? injectNoIndexMeta(indexHtmlTemplate) : indexHtmlTemplate;
-      res.status(status).type('text/html').send(html);
-    });
+    app.get('*', serveSpaOr404);
   } else {
     const vite = await createViteServer({
       server: {

@@ -295,6 +295,13 @@ CREATE TABLE IF NOT EXISTS uploaded_assets (
   created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS guest_verify_attempts (
+  ip_slug TEXT PRIMARY KEY,
+  fail_count INTEGER NOT NULL DEFAULT 0,
+  window_start BIGINT NOT NULL,
+  locked_until BIGINT NOT NULL DEFAULT 0
+);
+
 CREATE INDEX IF NOT EXISTS idx_users_lower_email ON users (LOWER(email));
 CREATE INDEX IF NOT EXISTS idx_users_neon_auth_id ON users (neon_auth_id);
 CREATE INDEX IF NOT EXISTS idx_memberships_user ON organization_memberships (user_id, organization_id);

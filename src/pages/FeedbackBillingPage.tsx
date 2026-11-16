@@ -114,6 +114,10 @@ export function SettingsBillingAuditPage({
   const [confirmName, setConfirmName] = useState('');
   const [deleteError, setDeleteError] = useState('');
 
+  const [accountDeleteOpen, setAccountDeleteOpen] = useState(false);
+  const [confirmAccountEmail, setConfirmAccountEmail] = useState('');
+  const [accountDeleteError, setAccountDeleteError] = useState('');
+
   const [notice, setNotice] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -223,6 +227,21 @@ export function SettingsBillingAuditPage({
     }
   };
 
+  const handleDeleteAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAccountDeleteError('');
+    try {
+      await apiFetch('/api/auth/account', {
+        method: 'DELETE',
+        body: JSON.stringify({ confirmEmail: confirmAccountEmail }),
+      });
+      setAccountDeleteOpen(false);
+      onOrgDeleted?.();
+    } catch (err: any) {
+      setAccountDeleteError(err.message);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -281,9 +300,9 @@ export function SettingsBillingAuditPage({
         <Card className="lg:col-span-7 p-5 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <h2 className="text-sm font-semibold text-slate-900">Subscription Plan & Monthly Quotas</h2>
+              <h2 className="text-sm font-semibold text-slate-900">Early Access Plan & Monthly Quotas</h2>
               <p className="text-xs text-slate-500">
-                Active Plan: <strong className="text-slate-900">{org?.plan_tier}</strong> ·{' '}
+                Active Plan: <strong className="text-slate-900">{org?.plan_tier}</strong> (Early Access · $0/mo during Alpha) ·{' '}
                 <span className="tabular-nums">
                   {billingInfo?.activePropertiesCount ?? '—'} / {org?.property_limit} active units
                 </span>{' '}
@@ -297,9 +316,9 @@ export function SettingsBillingAuditPage({
 
           <div className="grid sm:grid-cols-3 gap-3">
             {[
-              { tier: 'Starter', price: '$19/mo', cap: 'Up to 2 units · 100 AI/mo' },
-              { tier: 'Professional', price: '$49/mo', cap: 'Up to 10 units · 500 AI/mo' },
-              { tier: 'Portfolio', price: '$99/mo', cap: 'Up to 25 units · 2,000 AI/mo' },
+              { tier: 'Starter', price: '$0 in Alpha', future: 'Planned $19/mo', cap: 'Up to 2 units · 100 AI/mo' },
+              { tier: 'Professional', price: '$0 in Alpha', future: 'Planned $49/mo', cap: 'Up to 10 units · 500 AI/mo' },
+              { tier: 'Portfolio', price: '$0 in Alpha', future: 'Planned $99/mo', cap: 'Up to 25 units · 2,000 AI/mo' },
             ].map((p) => {
               const active = org?.plan_tier === p.tier;
               return (
@@ -314,8 +333,9 @@ export function SettingsBillingAuditPage({
                       <span className="text-xs font-semibold text-slate-900">{p.tier}</span>
                       {active && <Badge variant="brand">Current</Badge>}
                     </div>
-                    <div className="text-lg font-bold tabular-nums text-slate-900 mt-1">{p.price}</div>
-                    <div className="text-[11px] text-slate-500 mt-0.5">{p.cap}</div>
+                    <div className="text-base font-bold tabular-nums text-slate-900 mt-1">{p.price}</div>
+                    <div className="text-[11px] text-slate-500">{p.future} after GA</div>
+                    <div className="text-[11px] text-slate-600 mt-1">{p.cap}</div>
                   </div>
                   <Button
                     size="sm"
@@ -403,9 +423,9 @@ export function SettingsBillingAuditPage({
 
         <Card className="lg:col-span-3 p-5 space-y-3 flex flex-col justify-between">
           <div className="space-y-2">
-            <h2 className="text-sm font-semibold text-slate-900">GDPR & Privacy Governance</h2>
+            <h2 className="text-sm font-semibold text-slate-900">Privacy & Account Erasure</h2>
             <p className="text-xs text-slate-500 leading-relaxed">
-              Export all organization records in portable JSON or permanently erase this tenant workspace.
+              Export all workspace records in JSON, delete this organization, or permanently delete your personal account.
             </p>
           </div>
           <div className="space-y-2 pt-2">
@@ -413,7 +433,10 @@ export function SettingsBillingAuditPage({
               <Download className="w-3.5 h-3.5" /> Export Organization Data (JSON)
             </Button>
             <Button size="sm" variant="danger" className="w-full" onClick={() => setDeleteOpen(true)}>
-              <Trash2 className="w-3.5 h-3.5" /> Delete Organization & Data
+              <Trash2 className="w-3.5 h-3.5" /> Delete Organization
+            </Button>
+            <Button size="sm" variant="outline" className="w-full text-red-700 border-red-200 hover:bg-red-50" onClick={() => setAccountDeleteOpen(true)}>
+              <Trash2 className="w-3.5 h-3.5" /> Delete My Account
             </Button>
           </div>
         </Card>
@@ -483,7 +506,38 @@ export function SettingsBillingAuditPage({
               Cancel
             </Button>
             <Button type="submit" variant="danger">
-              Permanently Delete All Data
+              Permanently Delete Organization
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={accountDeleteOpen}
+        onClose={() => setAccountDeleteOpen(false)}
+        title="Delete Personal Staywise Account"
+        subtitle="Permanently removes your user login, memberships, and any sole-owned organizations from Staywise and Neon Auth."
+      >
+        <form onSubmit={handleDeleteAccount} className="space-y-3.5">
+          {accountDeleteError && (
+            <div className="p-2.5 rounded bg-red-50 border border-red-200 text-xs text-red-700">{accountDeleteError}</div>
+          )}
+          <p className="text-xs text-slate-600">
+            Enter your account email (<strong className="text-slate-900">{org?.contact_email || 'your login email'}</strong>) to confirm permanent deletion:
+          </p>
+          <Input
+            type="email"
+            required
+            placeholder="you@company.com"
+            value={confirmAccountEmail}
+            onChange={(e) => setConfirmAccountEmail(e.target.value)}
+          />
+          <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
+            <Button type="button" variant="outline" onClick={() => setAccountDeleteOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="danger">
+              Delete Account Permanently
             </Button>
           </div>
         </form>

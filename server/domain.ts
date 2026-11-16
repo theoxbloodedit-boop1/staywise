@@ -514,8 +514,57 @@ export async function runSafeAiAssistant(opts: {
     };
   }
 
+  // Detect schedule exceptions or custom approval requests (e.g., "check-in à 9h", "early check-in", "late checkout", "baggage drop")
+  const hasExplicitTimePattern = /\b\d{1,2}\s?(h|am|pm|:00|:30)\b/i.test(q);
+  const specialScheduleKeywords = [
+    'early',
+    'late',
+    'earlier',
+    'later',
+    'extend',
+    'before',
+    'after',
+    'luggage',
+    'baggage',
+    'bags',
+    'drop off',
+    'extra guest',
+    'additional guest',
+    'refund',
+    'discount',
+    'discount',
+    'tôt',
+    'tot',
+    'tard',
+    'avant',
+    'après',
+    'apres',
+    'arrivée',
+    'arrivee',
+    'départ',
+    'depart',
+    'bagage',
+  ];
+  const isCustomTimeOrApprovalRequest =
+    hasWord(specialScheduleKeywords) ||
+    (hasExplicitTimePattern &&
+      hasWord(['check-in', 'check in', 'checkin', 'check-out', 'check out', 'checkout', 'arrive', 'arrival', 'leave', 'depart']));
+
   const matchedParts: string[] = [];
   const sources = new Set<string>();
+
+  if (isCustomTimeOrApprovalRequest) {
+    sources.add('Check-In Instructions');
+    sources.add('Before You Go / Check-Out');
+    return {
+      answer: `Standard check-in for ${prop.name} begins at ${checkin.checkInTime || '4:00 PM'} and check-out is at ${checkout.checkOutTime || '11:00 AM'}. Custom timing (such as early arrival, late departure, or luggage drop-off) requires turnover clearance and isn’t auto-approved in the Welcome Book, so I’ve escalated your request directly to the ${welcome.hostName || 'property'} team for confirmation.`,
+      sources: Array.from(sources),
+      confidence: 'Escalated — Host Approval Required',
+      escalated: true,
+      knowledgeGap: false,
+      emergencyAlert: false,
+    };
+  }
 
   if (hasWord(['wifi', 'wi-fi', 'internet', 'password', 'network'])) {
     sources.add('Wi-Fi & Home Instructions');

@@ -258,15 +258,14 @@ authRouter.post(
 
       await tx.execute(
         `INSERT INTO payment_records (id, organization_id, plan_tier, amount_cents, tax_cents, currency, status, invoice_number, period_label, created_at)
-         VALUES ($1, $2, $3, $4, 0, $5, 'Paid', $6, $7, $8)`,
+         VALUES ($1, $2, $3, 0, 0, $4, 'Early Access ($0)', $5, $6, $7)`,
         [
           uid('pay'),
           orgId,
           chosenPlan,
-          cents,
           currency,
           invoiceNum,
-          new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) + ' Monthly',
+          new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) + ' Early Access',
           now,
         ]
       );
@@ -320,5 +319,55 @@ authRouter.post(
       actor.organizationId,
     ]);
     res.json({ ok: true, acceptedAt: now });
+  })
+);
+
+authRouter.delete(
+  '/account',
+  authLimiter,
+  ah(async (req, res) => {
+    const neonUser = await resolveNeonJwt(req);
+    if (!neonUser) {
+      return res.status(401).json({ error: 'Authentication required to delete account.' });
+    }
+    const { confirmEmail } = req.body || {};
+    if (!confirmEmail || String(confirmEmail).trim().toLowerCase() !== neonUser.email.toLowerCase()) {
+      return res.status(400).json({ error: 'Please type your exact account email to confirm deletion.' });
+    }
+
+    const userRow = await db.queryOne<any>(
+      'SELECT * FROM users WHERE neon_auth_id = $1 OR LOWER(email) = LOWER($2)',
+      [neonUser.sub, neonUser.email]
+    );
+
+    if (userRow) {
+      await db.transaction(async (tx) => {
+        // Delete organizations where this user is the sole Organization Owner
+        const ownerMemberships = await tx.query<{ organization_id: string }>(
+          `SELECT organization_id FROM organization_memberships WHERE user_id = $1 AND role = 'Organization Owner'`,
+          [userRow.id]
+        );
+        for (const om of ownerMemberships) {
+          const otherOwners = await tx.queryOne<{ c: number }>(
+            `SELECT COUNT(*)::int as c FROM organization_memberships WHERE organization_id = $1 AND role = 'Organization Owner' AND user_id != $2`,
+            [om.organization_id, userRow.id]
+          );
+          if ((otherOwners?.c ?? 0) === 0) {
+            await tx.execute('DELETE FROM uploaded_assets WHERE organization_id = $1', [om.organization_id]);
+            await tx.execute('DELETE FROM organizations WHERE id = $1', [om.organization_id]);
+          }
+        }
+        await tx.execute('DELETE FROM organization_memberships WHERE user_id = $1', [userRow.id]);
+        await tx.execute('DELETE FROM users WHERE id = $1', [userRow.id]);
+      });
+    }
+
+    // Remove Neon Auth identity row cleanly if present in neon_auth schema
+    await db.execute('DELETE FROM neon_auth."user" WHERE id = $1 OR LOWER(email) = LOWER($2)', [
+      neonUser.sub,
+      neonUser.email,
+    ]).catch(() => {});
+
+    res.json({ ok: true, deletedEmail: neonUser.email });
   })
 );

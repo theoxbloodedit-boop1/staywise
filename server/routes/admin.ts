@@ -126,11 +126,13 @@ adminRouter.get(
     const unresolvedGuestRequests = supportAll.filter((s) => s.status !== 'Resolved').length;
 
     const completedCleanings = cleaningRange.filter((c) => c.status === 'Completed').length;
-    const cleaningCompletionRate = cleaningRange.length > 0 ? Math.round((completedCleanings / cleaningRange.length) * 100) : 100;
-    const readinessRate = propertyList.length > 0 ? Math.round((readyProperties / propertyList.length) * 100) : 100;
+    const cleaningCompletionRate =
+      cleaningRange.length > 0 ? Math.round((completedCleanings / cleaningRange.length) * 100) : null;
+    const readinessRate =
+      propertyList.length > 0 ? Math.round((readyProperties / propertyList.length) * 100) : null;
 
     const resolved = incidentsRange.filter((i) => i.resolved_at && i.created_at);
-    let avgResolutionHours = 0;
+    let avgResolutionHours: number | null = null;
     if (resolved.length > 0) {
       const totalMs = resolved.reduce((acc, i) => acc + Math.max(0, Date.parse(i.resolved_at) - Date.parse(i.created_at)), 0);
       avgResolutionHours = Math.max(1, Math.round(totalMs / resolved.length / 3600000));
@@ -152,7 +154,7 @@ adminRouter.get(
               ) / feedbackRange.length
             ).toFixed(2)
           )
-        : 5.0;
+        : null;
 
     const knowledgeGapsOpen = aiAll.filter((a) => a.knowledge_gap_flag === 1 && a.gap_resolved === 0).length;
 
@@ -181,7 +183,7 @@ adminRouter.get(
         aiDeflectionRate:
           aiRange.length > 0
             ? Math.round((aiRange.filter((a) => a.escalated === 0).length / aiRange.length) * 100)
-            : 100,
+            : null,
         knowledgeGapsOpen,
         avgFeedbackScore,
         categoryBreakdown,
@@ -645,15 +647,14 @@ adminRouter.post(
 
       await tx.execute(
         `INSERT INTO payment_records (id, organization_id, plan_tier, amount_cents, tax_cents, currency, status, invoice_number, period_label, created_at)
-         VALUES ($1, $2, $3, $4, 0, $5, 'Paid', $6, $7, $8)`,
+         VALUES ($1, $2, $3, 0, 0, $4, 'Early Access ($0)', $5, $6, $7)`,
         [
           uid('pay'),
           actor.organizationId,
           planTier,
-          spec.cents,
           currency,
           invoiceNum,
-          new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) + ' Plan Change',
+          new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) + ' Early Access',
           now,
         ]
       );

@@ -7,6 +7,9 @@ import type { OrgMember, Organization, SessionContext, UserRole } from './lib/ty
 
 // Route-based Code Splitting via React.lazy()
 const LandingPage = lazy(() => import('./pages/LandingPage').then((m) => ({ default: m.LandingPage })));
+const FeaturesPage = lazy(() => import('./pages/PublicPages').then((m) => ({ default: m.FeaturesPage })));
+const PricingPage = lazy(() => import('./pages/PublicPages').then((m) => ({ default: m.PricingPage })));
+const SecurityPage = lazy(() => import('./pages/PublicPages').then((m) => ({ default: m.SecurityPage })));
 const AuthPage = lazy(() => import('./pages/AuthPage').then((m) => ({ default: m.AuthPage })));
 const PrivacyPolicyPage = lazy(() => import('./pages/LegalPages').then((m) => ({ default: m.PrivacyPolicyPage })));
 const TermsPage = lazy(() => import('./pages/LegalPages').then((m) => ({ default: m.TermsPage })));
@@ -68,7 +71,10 @@ function PageLoader() {
 export default function App() {
   const [pathname, setPathname] = useState<string>(() => window.location.pathname);
   const [authMode, setAuthMode] = useState<'register' | 'login' | 'forgot' | 'reset'>('login');
-  const [authPlan, setAuthPlan] = useState<string>('Professional');
+  const [authPlan, setAuthPlan] = useState<string>(() => {
+    const p = new URLSearchParams(window.location.search).get('plan');
+    return p === 'Starter' || p === 'Professional' || p === 'Portfolio' ? p : 'Starter';
+  });
 
   const [session, setSession] = useState<SessionContext>({
     organizationId: '',
@@ -100,15 +106,62 @@ export default function App() {
   }, []);
 
   const navigatePath = (nextPath: string) => {
-    if (nextPath !== pathname) {
+    const cleanNext = nextPath.split('?')[0];
+    if (nextPath !== `${pathname}${window.location.search}`) {
       window.history.pushState({}, '', nextPath);
-      setPathname(nextPath);
-      if (KNOWN_APP_SUBROUTES[nextPath]) {
-        setActiveRoute(KNOWN_APP_SUBROUTES[nextPath]);
+      setPathname(cleanNext);
+      if (KNOWN_APP_SUBROUTES[cleanNext]) {
+        setActiveRoute(KNOWN_APP_SUBROUTES[cleanNext]);
       }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
+
+  const openAuth = (mode: 'register' | 'login' | 'forgot' | 'reset', plan?: string) => {
+    setAuthMode(mode);
+    const chosen = plan && ['Starter', 'Professional', 'Portfolio'].includes(plan) ? plan : 'Starter';
+    setAuthPlan(chosen);
+    navigatePath(mode === 'register' ? `/auth?plan=${encodeURIComponent(chosen)}` : '/auth');
+  };
+
+  useEffect(() => {
+    const TITLES: Record<string, [string, string]> = {
+      '/': [
+        'Staywise — Guest Welcome Books & Property Operations',
+        'Mobile guest welcome books, AES-256 stay-gated door codes, and photo-verified cleaning checklists for short-term rental hosts.',
+      ],
+      '/features': [
+        'Features — Mobile Welcome Books, Lock Vault & Turnover Ops | Staywise',
+        'Explore Staywise digital guidebooks, rate-limited door and Wi-Fi access, grounded guest assistance, and photo-verified checklists.',
+      ],
+      '/pricing': [
+        'Pricing — Free During Early Access | Staywise',
+        'Starter, Professional, and Portfolio tiers are $0/month during Staywise Early Access with no card required.',
+      ],
+      '/security': [
+        'Security & Encryption — Staywise Hospitality Ops',
+        'AES-256-GCM credential encryption, PostgreSQL brute-force protection, EdDSA/JWKS auth, and instant JSON export or account erasure.',
+      ],
+      '/privacy': [
+        'Privacy Policy | Staywise',
+        'Staywise Software LLC privacy notice covering access secret encryption, subprocessors, retention, and GDPR/CCPA rights.',
+      ],
+      '/terms': [
+        'Terms of Service | Staywise',
+        'Commercial terms and Early Access billing details for Staywise Software LLC.',
+      ],
+      '/auth': [
+        'Sign In or Create Workspace | Staywise',
+        'Sign in or create your Staywise hospitality operations workspace.',
+      ],
+    };
+    const match = TITLES[pathname];
+    if (match) {
+      document.title = match[0];
+      const meta = document.querySelector('meta[name="description"]');
+      if (meta) meta.setAttribute('content', match[1]);
+    }
+  }, [pathname]);
 
   const hydrateFromBackend = async () => {
     setAuthReady(false);
@@ -195,11 +248,15 @@ export default function App() {
     );
   }
 
-  // Legal pages
+  // Legal & Public SEO Pages
   if (pathname === '/privacy') {
     return (
       <Suspense fallback={<PageLoader />}>
-        <PrivacyPolicyPage onNavigate={navigatePath} />
+        <PrivacyPolicyPage
+          onNavigate={navigatePath}
+          onEnterWorkspace={() => navigatePath('/app')}
+          onOpenAuth={openAuth}
+        />
         <CookieBanner onNavigate={navigatePath} />
       </Suspense>
     );
@@ -208,7 +265,50 @@ export default function App() {
   if (pathname === '/terms') {
     return (
       <Suspense fallback={<PageLoader />}>
-        <TermsPage onNavigate={navigatePath} />
+        <TermsPage
+          onNavigate={navigatePath}
+          onEnterWorkspace={() => navigatePath('/app')}
+          onOpenAuth={openAuth}
+        />
+        <CookieBanner onNavigate={navigatePath} />
+      </Suspense>
+    );
+  }
+
+  if (pathname === '/features') {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <FeaturesPage
+          onNavigatePath={navigatePath}
+          onEnterWorkspace={() => navigatePath('/app')}
+          onOpenAuth={openAuth}
+        />
+        <CookieBanner onNavigate={navigatePath} />
+      </Suspense>
+    );
+  }
+
+  if (pathname === '/pricing') {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <PricingPage
+          onNavigatePath={navigatePath}
+          onEnterWorkspace={() => navigatePath('/app')}
+          onOpenAuth={openAuth}
+        />
+        <CookieBanner onNavigate={navigatePath} />
+      </Suspense>
+    );
+  }
+
+  if (pathname === '/security') {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <SecurityPage
+          onNavigatePath={navigatePath}
+          onEnterWorkspace={() => navigatePath('/app')}
+          onOpenAuth={openAuth}
+        />
         <CookieBanner onNavigate={navigatePath} />
       </Suspense>
     );
@@ -220,11 +320,7 @@ export default function App() {
       <Suspense fallback={<PageLoader />}>
         <LandingPage
           onEnterWorkspace={() => navigatePath('/app')}
-          onOpenAuth={(mode, plan) => {
-            setAuthMode(mode);
-            if (plan) setAuthPlan(plan);
-            navigatePath('/auth');
-          }}
+          onOpenAuth={openAuth}
           onNavigatePath={navigatePath}
         />
         <CookieBanner onNavigate={navigatePath} />

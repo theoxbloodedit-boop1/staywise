@@ -1,4 +1,5 @@
-import { Router } from 'express';
+import { Router, type Request } from 'express';
+import crypto from 'crypto';
 import { db } from '../db.js';
 import {
   ah,
@@ -16,9 +17,70 @@ import { createRateLimiter } from '../security.js';
 
 export const guestRouter = Router();
 
+const MAX_FAILED_CODE_ATTEMPTS = 8;
+const ATTEMPT_WINDOW_MS = 15 * 60_000;
+const LOCKOUT_MS = 15 * 60_000;
+
+function getClientIpHash(req: Request, slug: string): string {
+  const fwd = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim();
+  const ip = fwd || req.ip || req.socket.remoteAddress || 'unknown';
+  return crypto.createHash('sha256').update(`${ip}::${slug}`).digest('hex').slice(0, 48);
+}
+
+async function checkGuestBruteForceLock(req: Request, slug: string): Promise<{ blocked: boolean; retryAfterSec: number }> {
+  const key = getClientIpHash(req, slug);
+  const now = Date.now();
+  const row = await db.queryOne<{ fail_count: number; window_start: number; locked_until: number }>(
+    'SELECT fail_count, window_start, locked_until FROM guest_verify_attempts WHERE ip_slug = $1',
+    [key]
+  );
+  if (row && Number(row.locked_until) > now) {
+    return { blocked: true, retryAfterSec: Math.ceil((Number(row.locked_until) - now) / 1000) };
+  }
+  return { blocked: false, retryAfterSec: 0 };
+}
+
+async function recordGuestCodeAttempt(req: Request, slug: string, valid: boolean, orgId?: string, propId?: string) {
+  const key = getClientIpHash(req, slug);
+  const now = Date.now();
+  if (valid) {
+    await db.execute('DELETE FROM guest_verify_attempts WHERE ip_slug = $1', [key]);
+    return;
+  }
+  const existing = await db.queryOne<{ fail_count: number; window_start: number; locked_until: number }>(
+    'SELECT fail_count, window_start, locked_until FROM guest_verify_attempts WHERE ip_slug = $1',
+    [key]
+  );
+  let nextCount = 1;
+  let windowStart = now;
+  if (existing && now - Number(existing.window_start) < ATTEMPT_WINDOW_MS) {
+    nextCount = Number(existing.fail_count) + 1;
+    windowStart = Number(existing.window_start);
+  }
+  const lockedUntil = nextCount >= MAX_FAILED_CODE_ATTEMPTS ? now + LOCKOUT_MS : 0;
+  await db.execute(
+    `INSERT INTO guest_verify_attempts (ip_slug, fail_count, window_start, locked_until)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (ip_slug) DO UPDATE SET fail_count = $2, window_start = $3, locked_until = $4`,
+    [key, nextCount, windowStart, lockedUntil]
+  );
+  if (lockedUntil > 0 && orgId && propId) {
+    await logAudit({
+      organizationId: orgId,
+      propertyId: propId,
+      actorName: 'Rate Limiter',
+      actorRole: 'Guest',
+      action: 'GUEST_CODE_BRUTEFORCE_BLOCKED',
+      entityType: 'Property',
+      entityId: propId,
+      details: `Blocked repeated invalid access code attempts on ${slug} (${nextCount} attempts in 15m).`,
+    });
+  }
+}
+
 const guestVerifyLimiter = createRateLimiter({
   windowMs: 60_000,
-  max: 20,
+  max: 15,
   prefix: 'guest-verify',
 });
 
@@ -38,8 +100,21 @@ guestRouter.get(
 
     if (!prop) return res.status(404).json({ error: 'Property Welcome Book not found.' });
 
-    const code = typeof req.query.code === 'string' ? req.query.code : '';
+    const code = typeof req.query.code === 'string' ? req.query.code.trim() : '';
+    if (code) {
+      const lockCheck = await checkGuestBruteForceLock(req, prop.slug);
+      if (lockCheck.blocked) {
+        res.setHeader('Retry-After', String(lockCheck.retryAfterSec));
+        return res.status(429).json({
+          error: 'Too many invalid access code attempts. Please wait 15 minutes or contact your host.',
+        });
+      }
+    }
+
     const verification = await resolveGuestVerification(prop, code);
+    if (code) {
+      await recordGuestCodeAttempt(req, prop.slug, verification.valid, prop.organization_id, prop.id);
+    }
     const isVerified = verification.valid;
     const reservation = verification.valid ? verification.reservation : null;
 
@@ -129,13 +204,24 @@ guestRouter.post(
   guestVerifyLimiter,
   ah(async (req, res) => {
     const prop = await db.queryOne<any>(
-      'SELECT id, name, organization_id, timezone FROM properties WHERE slug = $1 AND archived = 0',
+      'SELECT id, slug, name, organization_id, timezone FROM properties WHERE slug = $1 AND archived = 0',
       [req.params.slug]
     );
     if (!prop) return res.status(404).json({ error: 'Property not found.' });
 
+    const lockCheck = await checkGuestBruteForceLock(req, prop.slug);
+    if (lockCheck.blocked) {
+      res.setHeader('Retry-After', String(lockCheck.retryAfterSec));
+      return res.status(429).json({
+        error: 'Too many invalid access code attempts. Please wait 15 minutes or contact your host.',
+      });
+    }
+
     const { code } = req.body || {};
     const verification = await resolveGuestVerification(prop, code);
+    if (code) {
+      await recordGuestCodeAttempt(req, prop.slug, verification.valid, prop.organization_id, prop.id);
+    }
     if (!verification.valid) {
       const messages: Record<string, string> = {
         missing: 'Please enter your stay access code.',
