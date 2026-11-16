@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Allow: /privacy
+Allow: /terms
+Disallow: /app/
+Disallow: /auth
+Disallow: /guest/
+Disallow: /print/
+Disallow: /api/
+Disallow: /uploads/

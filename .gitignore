@@ -1,0 +1,22 @@
+# Dependencies & build output
+node_modules/
+dist/
+.vercel/
+
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Legacy local SQLite & runtime storage
+data/
+*.db
+*.db-shm
+*.db-wal
+.server-secrets.json
+
+# OS & editor artifacts
+.DS_Store
+*.log
+npm-debug.log*
