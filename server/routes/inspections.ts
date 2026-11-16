@@ -1,3 +1,4 @@
+import { authorizeProperty } from '../lib/authorization.js';
 import { Router } from 'express';
 import { db } from '../db.js';
 import {
@@ -24,7 +25,7 @@ inspectionsRouter.get(
     const assetsRows = await db.query<any>(
       `SELECT a.*, p.name as property_name
        FROM property_assets a
-       JOIN properties p ON p.id = a.property_id
+       JOIN properties p ON p.id = a.property_id AND p.organization_id = a.organization_id
        WHERE a.organization_id = $1
        ORDER BY p.name ASC, a.category ASC`,
       [actor.organizationId]
@@ -34,7 +35,7 @@ inspectionsRouter.get(
     const inspectionsRows = await db.query<any>(
       `SELECT ins.*, p.name as property_name, p.readiness_status, p.readiness_reason
        FROM inspections ins
-       JOIN properties p ON p.id = ins.property_id
+       JOIN properties p ON p.id = ins.property_id AND p.organization_id = ins.organization_id
        WHERE ins.organization_id = $1
        ORDER BY ins.inspected_at DESC`,
       [actor.organizationId]
@@ -62,6 +63,7 @@ inspectionsRouter.post(
       [b.property_id, actor.organizationId]
     );
     if (!prop) return res.status(404).json({ error: 'Property not found.' });
+    await authorizeProperty(db, actor, prop.id);
 
     const id = uid('ast');
     await db.execute(
@@ -93,7 +95,7 @@ inspectionsRouter.post(
     });
 
     const created = await db.queryOne(
-      'SELECT a.*, p.name as property_name FROM property_assets a JOIN properties p ON p.id = a.property_id WHERE a.id = $1',
+      'SELECT a.*, p.name as property_name FROM property_assets a JOIN properties p ON p.id = a.property_id AND p.organization_id = a.organization_id WHERE a.id = $1',
       [id]
     );
     res.status(201).json(created);
@@ -115,6 +117,7 @@ inspectionsRouter.post(
       [b.property_id, actor.organizationId]
     );
     if (!prop) return res.status(404).json({ error: 'Property not found.' });
+    await authorizeProperty(db, actor, prop.id);
     if (!canAccessProperty(actor, prop.id)) return res.status(403).json({ error: 'Property access denied.' });
 
     const discrepancies = b.items.filter((it: any) => it.status === 'Missing' || it.status === 'Damaged');
@@ -181,7 +184,7 @@ inspectionsRouter.post(
     });
 
     const created = await db.queryOne<any>(
-      'SELECT ins.*, p.name as property_name, p.readiness_status, p.readiness_reason FROM inspections ins JOIN properties p ON p.id = ins.property_id WHERE ins.id = $1',
+      'SELECT ins.*, p.name as property_name, p.readiness_status, p.readiness_reason FROM inspections ins JOIN properties p ON p.id = ins.property_id AND p.organization_id = ins.organization_id WHERE ins.id = $1',
       [id]
     );
 

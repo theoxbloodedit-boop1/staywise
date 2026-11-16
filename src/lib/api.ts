@@ -39,7 +39,7 @@ export function getActiveOrganizationId(): string {
   return activeOrganizationId;
 }
 
-async function buildAuthHeaders(extra?: Record<string, string>): Promise<Record<string, string>> {
+export async function buildAuthHeaders(extra?: Record<string, string>): Promise<Record<string, string>> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...extra,
@@ -106,7 +106,8 @@ export async function downloadWithAuth(path: string, fallbackFilename: string) {
 export async function uploadEvidencePhoto(
   dataUrl: string,
   filename = 'photo',
-  guestAuth?: { slug: string; code: string }
+  guestAuth?: { slug: string; code: string },
+  propertyId?: string
 ): Promise<string> {
   const headers = await buildAuthHeaders();
   const res = await fetch('/api/uploads', {
@@ -116,6 +117,8 @@ export async function uploadEvidencePhoto(
     body: JSON.stringify({
       dataUrl,
       filename,
+      category: filename,
+      property_id: propertyId,
       ...(guestAuth ? { slug: guestAuth.slug, code: guestAuth.code } : {}),
     }),
   });
@@ -123,5 +126,5 @@ export async function uploadEvidencePhoto(
   if (!res.ok) {
     throw new Error(data.error || 'Photo upload failed.');
   }
-  return data.url as string;
+  return data.media_id as string;
 }

@@ -1,3 +1,4 @@
+import { authorizeProperty } from '../lib/authorization.js';
 import { Router } from 'express';
 import { db } from '../db.js';
 import {
@@ -39,6 +40,7 @@ guidebooksRouter.get(
       [req.params.propertyId, actor.organizationId]
     );
     if (!prop) return res.status(404).json({ error: 'Property not found in organization.' });
+    await authorizeProperty(db, actor, prop.id);
     if (!canAccessProperty(actor, prop.id)) return res.status(403).json({ error: 'Property access denied.' });
 
     const guidebook = await db.queryOne<any>('SELECT * FROM guidebooks WHERE property_id = $1', [prop.id]);
@@ -70,6 +72,7 @@ guidebooksRouter.patch(
       [req.params.propertyId, actor.organizationId]
     );
     if (!prop) return res.status(404).json({ error: 'Property not found.' });
+    await authorizeProperty(db, actor, prop.id);
     if (!canAccessProperty(actor, prop.id)) return res.status(403).json({ error: 'Property access denied.' });
 
     const gb = await db.queryOne<any>('SELECT * FROM guidebooks WHERE property_id = $1', [prop.id]);
@@ -189,6 +192,9 @@ guidebooksRouter.post(
     if (!sourceProp || !targetProp) {
       return res.status(404).json({ error: 'Both source and target properties must belong to your organization.' });
     }
+
+    await authorizeProperty(db, actor, sourceProp.id);
+    await authorizeProperty(db, actor, targetProp.id);
 
     const sourceSections = await db.query<any>(
       'SELECT section_key, title, is_visible, sort_order, content_json FROM guidebook_sections WHERE property_id = $1',

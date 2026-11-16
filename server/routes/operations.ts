@@ -1,3 +1,5 @@
+import { validateEvidenceReferences } from '../lib/private-media.js';
+import { authorizeProperty, validateReservationReference, resolveAssignee } from '../lib/authorization.js';
 import { Router } from 'express';
 import { db } from '../db.js';
 import {
@@ -36,7 +38,7 @@ operationsRouter.get(
     const rows = await db.query<any>(
       `SELECT c.*, p.name as property_name, p.city as property_city, p.readiness_status, p.readiness_reason
        FROM cleaning_tasks c
-       JOIN properties p ON p.id = c.property_id
+       JOIN properties p ON p.id = c.property_id AND p.organization_id = c.organization_id
        WHERE c.organization_id = $1
        ORDER BY c.due_date ASC`,
       [actor.organizationId]
@@ -70,6 +72,12 @@ operationsRouter.post(
       [b.property_id, actor.organizationId]
     );
     if (!prop) return res.status(404).json({ error: 'Property not found in organization.' });
+    await authorizeProperty(db, actor, prop.id);
+
+    await validateReservationReference(db, actor, prop.id, b.reservation_id);
+    const assignee = await resolveAssignee(db, actor, prop.id, b.assigned_user_id, b.assigned_name);
+    b.assigned_user_id = assignee.id;
+    b.assigned_name = assignee.name;
 
     const id = uid('cln');
     const now = nowIso();
@@ -131,7 +139,7 @@ operationsRouter.post(
 
     const created = await db.queryOne<any>(
       `SELECT c.*, p.name as property_name, p.city as property_city, p.readiness_status, p.readiness_reason
-       FROM cleaning_tasks c JOIN properties p ON p.id = c.property_id WHERE c.id = $1`,
+       FROM cleaning_tasks c JOIN properties p ON p.id = c.property_id AND p.organization_id = c.organization_id WHERE c.id = $1`,
       [id]
     );
 
@@ -146,6 +154,7 @@ operationsRouter.post(
 
 operationsRouter.patch(
   '/:id',
+  requireRoles('Organization Owner', 'Organization Admin', 'Property Manager', 'Concierge', 'Inspector', 'Cleaning Staff', 'Platform Super Admin'),
   ah(async (req, res) => {
     const actor = getActor(req);
     const existing = await db.queryOne<any>(
@@ -153,6 +162,7 @@ operationsRouter.patch(
       [req.params.id, actor.organizationId]
     );
     if (!existing) return res.status(404).json({ error: 'Cleaning task not found.' });
+    await authorizeProperty(db, actor, existing.property_id);
     if (!canAccessProperty(actor, existing.property_id)) return res.status(403).json({ error: 'Property access denied.' });
 
     const b = req.body || {};
@@ -181,6 +191,14 @@ operationsRouter.patch(
     if (!isSupervisor && b.review_notes !== undefined && b.review_notes !== existing.review_notes) {
       return res.status(403).json({ error: 'Only supervisors may modify review notes.' });
     }
+
+    if (b.assigned_user_id !== undefined || b.assigned_name !== undefined) {
+      const assignee = await resolveAssignee(db, actor, existing.property_id, b.assigned_user_id, b.assigned_name);
+      b.assigned_user_id = assignee.id;
+      b.assigned_name = assignee.name;
+    }
+
+    if (b.photo_urls !== undefined) await validateEvidenceReferences(db, actor.organizationId, existing.property_id, b.photo_urls, 'cleaning');
 
     const nextChecklist = b.checklist ? JSON.stringify(b.checklist) : existing.checklist_json;
     const nextPhotos = b.photo_urls ? JSON.stringify(b.photo_urls) : existing.photo_urls_json;
@@ -239,7 +257,7 @@ operationsRouter.patch(
 
     const updated = await db.queryOne<any>(
       `SELECT c.*, p.name as property_name, p.city as property_city, p.readiness_status, p.readiness_reason
-       FROM cleaning_tasks c JOIN properties p ON p.id = c.property_id WHERE c.id = $1`,
+       FROM cleaning_tasks c JOIN properties p ON p.id = c.property_id AND p.organization_id = c.organization_id WHERE c.id = $1`,
       [existing.id]
     );
 

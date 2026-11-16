@@ -1,3 +1,4 @@
+import { validateEvidenceReferences } from '../lib/private-media.js';
 import { Router, type Request } from 'express';
 import { db } from '../db.js';
 import {
@@ -408,6 +409,11 @@ guestRouter.post(
     let incidentId: string | null = null;
     let woCode: string | null = null;
     const safeUrgency = verification.valid && ['Normal', 'High', 'Critical'].includes(b.urgency) ? b.urgency : 'Normal';
+
+    if (b.attachment_url) {
+      if (!verification.valid) return res.status(403).json({ error: 'Verified stay required for evidence.' });
+      await validateEvidenceReferences(db, prop.organization_id, prop.id, [b.attachment_url], 'guest-issue', verification.reservation.id);
+    }
 
     if (isMaintenance) {
       incidentId = uid('inc');

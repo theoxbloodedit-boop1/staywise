@@ -1,6 +1,7 @@
+import { hasPropertyScope, isKnownOperationalRole, parseAssignments } from './lib/authorization.js';
 import crypto from 'crypto';
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
-import { db } from './db.js';
+import { db, type DbExecutor } from './db.js';
 import { decryptField, verifyNeonAuthJwt, type VerifiedNeonUser } from './security.js';
 
 export function ah(fn: (req: Request, res: Response, next: NextFunction) => Promise<any>): RequestHandler {
@@ -125,20 +126,10 @@ export async function resolveNeonJwt(req: Request): Promise<VerifiedNeonUser | n
 
 export async function resolveSessionActor(req: Request): Promise<ActorContext | null> {
   const neonUser = await resolveNeonJwt(req);
-  if (!neonUser) return null;
+  if (!neonUser || !neonUser.emailVerified) return null;
 
-  // Locate user by neon_auth_id, or link invited staff account matching verified email
-  let user = await db.queryOne<any>('SELECT * FROM users WHERE neon_auth_id = $1', [neonUser.sub]);
-  if (!user) {
-    const invitedByEmail = await db.queryOne<any>(
-      'SELECT * FROM users WHERE LOWER(email) = LOWER($1)',
-      [neonUser.email]
-    );
-    if (invitedByEmail && !invitedByEmail.neon_auth_id) {
-      await db.execute('UPDATE users SET neon_auth_id = $1 WHERE id = $2', [neonUser.sub, invitedByEmail.id]);
-      user = { ...invitedByEmail, neon_auth_id: neonUser.sub };
-    }
-  }
+  // Email alone never links an account. Only verified invitation acceptance may link.
+  const user = await db.queryOne<any>('SELECT * FROM users WHERE neon_auth_id = $1', [neonUser.sub]);
 
   if (!user) return null;
 
@@ -159,14 +150,8 @@ export async function resolveSessionActor(req: Request): Promise<ActorContext | 
     return null;
   }
 
-  let assignedPropertyIds: string[] = ['*'];
-  if (membership.assigned_property_ids_json) {
-    try {
-      assignedPropertyIds = JSON.parse(membership.assigned_property_ids_json);
-    } catch {
-      assignedPropertyIds = ['*'];
-    }
-  }
+  const assignedPropertyIds = parseAssignments(membership.assigned_property_ids_json);
+  if (!assignedPropertyIds || !isKnownOperationalRole(membership.role)) return null;
 
   const orgRow = await db.queryOne<{ account_status?: string }>(
     'SELECT account_status FROM organizations WHERE id = $1',
@@ -174,7 +159,7 @@ export async function resolveSessionActor(req: Request): Promise<ActorContext | 
   );
 
   const isPlatformAdmin =
-    membership.role === 'Platform Super Admin' || isPlatformAdminEmail(user.email);
+    membership.role === 'Platform Super Admin' && neonUser.emailVerified && isPlatformAdminEmail(neonUser.email);
 
   return {
     organizationId: membership.organization_id,
@@ -184,7 +169,7 @@ export async function resolveSessionActor(req: Request): Promise<ActorContext | 
     actorEmail: user.email,
     actorRole: membership.role,
     isPlatformAdmin,
-    orgAccountStatus: orgRow?.account_status || 'Active',
+    orgAccountStatus: orgRow?.account_status || 'Unknown',
     assignedPropertyIds,
   };
 }
@@ -194,10 +179,10 @@ export const requireAuth: RequestHandler = ah(async (req, res, next) => {
   if (!actor) {
     return res.status(401).json({ error: 'Authentication required. Please sign in with Neon Auth.' });
   }
-  if (!isOperationalRole(actor.actorRole)) {
+  if (!isOperationalRole(actor.actorRole) || (actor.actorRole === 'Platform Super Admin' && !actor.isPlatformAdmin)) {
     return res.status(403).json({ error: 'Guests cannot access internal operations.' });
   }
-  if (actor.orgAccountStatus === 'Suspended' && !actor.isPlatformAdmin) {
+  if (actor.orgAccountStatus !== 'Active') {
     return res.status(403).json({ error: 'This workspace is currently suspended. Contact Staywise support.' });
   }
   (req as any).actor = actor;
@@ -219,7 +204,7 @@ export function getActor(req: Request): ActorContext {
 export function requireRoles(...allowed: string[]): RequestHandler {
   return (req: Request, res: Response, next: NextFunction) => {
     const actor = getActor(req);
-    if (!actor || !allowed.includes(actor.actorRole)) {
+    if (!actor || !isOperationalRole(actor.actorRole) || !allowed.includes(actor.actorRole) || (actor.actorRole === 'Platform Super Admin' && !actor.isPlatformAdmin)) {
       return res.status(403).json({ error: `Role "${actor?.actorRole || 'None'}" is not authorized for this action.` });
     }
     next();
@@ -227,15 +212,11 @@ export function requireRoles(...allowed: string[]): RequestHandler {
 }
 
 export function isOperationalRole(role: string) {
-  return role !== 'Guest';
+  return isKnownOperationalRole(role);
 }
 
 export function canAccessProperty(actor: ActorContext, propertyId: string): boolean {
-  if (actor.assignedPropertyIds.includes('*')) return true;
-  if (['Organization Owner', 'Organization Admin', 'Property Manager', 'Platform Super Admin'].includes(actor.actorRole)) {
-    return true;
-  }
-  return actor.assignedPropertyIds.includes(propertyId);
+  return hasPropertyScope(actor, propertyId);
 }
 
 export async function logAudit(opts: {
@@ -247,8 +228,8 @@ export async function logAudit(opts: {
   entityType: string;
   entityId: string;
   details: string;
-}) {
-  await db.execute(
+}, executor: DbExecutor = db) {
+  await executor.execute(
     `INSERT INTO audit_logs (id, organization_id, property_id, actor_name, actor_role, action, entity_type, entity_id, details, created_at)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
     [

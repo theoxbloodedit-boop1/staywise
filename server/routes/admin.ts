@@ -1,3 +1,5 @@
+import { issueInvitation, revokeInvitation } from '../lib/invitations.js';
+import { authorizeProperty, validateAssignments, ORGANIZATION_WIDE_ROLES } from '../lib/authorization.js';
 import { Router } from 'express';
 import { db } from '../db.js';
 import {
@@ -194,7 +196,7 @@ adminRouter.get(
     const conversations = await db.query<any>(
       `SELECT a.*, p.name as property_name
        FROM ai_conversations a
-       JOIN properties p ON p.id = a.property_id
+       JOIN properties p ON p.id = a.property_id AND p.organization_id = a.organization_id
        WHERE a.organization_id = $1
        ORDER BY a.created_at DESC`,
       [actor.organizationId]
@@ -221,6 +223,7 @@ adminRouter.post(
       [req.params.id, actor.organizationId]
     );
     if (!row) return res.status(404).json({ error: 'Conversation not found.' });
+    await authorizeProperty(db, actor, row.property_id);
 
     const { answerNote } = req.body || {};
     if (!answerNote || !String(answerNote).trim()) {
@@ -267,7 +270,7 @@ adminRouter.get(
     const rows = await db.query<any>(
       `SELECT s.*, p.name as property_name
        FROM support_requests s
-       JOIN properties p ON p.id = s.property_id
+       JOIN properties p ON p.id = s.property_id AND p.organization_id = s.organization_id
        WHERE s.organization_id = $1
        ORDER BY s.created_at DESC`,
       [actor.organizationId]
@@ -286,6 +289,7 @@ adminRouter.patch(
       [req.params.id, actor.organizationId]
     );
     if (!existing) return res.status(404).json({ error: 'Support request not found.' });
+    await authorizeProperty(db, actor, existing.property_id);
 
     await db.execute('UPDATE support_requests SET status = $1 WHERE id = $2', [
       req.body?.status || 'Resolved',
@@ -332,7 +336,7 @@ adminRouter.get(
         return {
           ...m,
           neon_linked: Boolean(m.neon_auth_id),
-          assigned_property_ids: JSON.parse(m.assigned_property_ids_json || '["*"]'),
+          assigned_property_ids: JSON.parse(m.assigned_property_ids_json || '[]'),
           workload_total: assigned.length,
           workload_completed: assigned.filter((t) => t.status === 'Completed').length,
         };
@@ -346,69 +350,22 @@ adminRouter.post(
   requireRoles('Organization Owner', 'Organization Admin', 'Platform Super Admin'),
   ah(async (req, res) => {
     const actor = getActor(req);
-    const { name, email, role, assigned_property_ids } = req.body || {};
-    if (!name || !email || !role) {
-      return res.status(400).json({ error: 'Name, email, and role are required.' });
-    }
-
-    const ALLOWED_ORG_ROLES = [
-      'Organization Admin',
-      'Property Manager',
-      'Cleaning Staff',
-      'Maintenance Technician',
-      'Inspector',
-      'Concierge',
-    ];
-    if (!ALLOWED_ORG_ROLES.includes(role)) {
-      return res.status(400).json({ error: 'Invalid organization staff role.' });
-    }
-
-    let user = await db.queryOne<any>('SELECT * FROM users WHERE LOWER(email) = LOWER($1)', [String(email).trim()]);
-    const now = nowIso();
-
-    if (!user) {
-      const userId = uid('usr');
-      const initials = String(name)
-        .split(/\s+/)
-        .map((p: string) => p[0])
-        .join('')
-        .slice(0, 2)
-        .toUpperCase();
-      await db.execute(
-        'INSERT INTO users (id, neon_auth_id, name, email, password_hash, avatar_initials, created_at) VALUES ($1, NULL, $2, $3, NULL, $4, $5)',
-        [userId, String(name).trim(), String(email).trim(), initials || 'TM', now]
-      );
-      user = { id: userId, name: String(name).trim(), email: String(email).trim(), avatar_initials: initials };
-    }
-
-    const existingMem = await db.queryOne(
-      'SELECT id FROM organization_memberships WHERE organization_id = $1 AND user_id = $2',
-      [actor.organizationId, user.id]
-    );
-    if (existingMem) {
-      return res.status(409).json({ error: 'User is already a member of this organization.' });
-    }
-
-    const memId = uid('mem');
-    await db.execute(
-      `INSERT INTO organization_memberships (id, organization_id, user_id, role, assigned_property_ids_json, status, created_at)
-       VALUES ($1, $2, $3, $4, $5, 'Active', $6)`,
-      [memId, actor.organizationId, user.id, role, JSON.stringify(assigned_property_ids || ['*']), now]
-    );
-
-    await logAudit({
-      organizationId: actor.organizationId,
-      actorName: actor.actorName,
-      actorRole: actor.actorRole,
-      action: 'TEAM_MEMBER_INVITED',
-      entityType: 'OrganizationMembership',
-      entityId: memId,
-      details: `Invited ${name} (${email}) with role "${role}". They can sign in via Neon Auth using this email to activate automatically.`,
-    });
-
-    res.status(201).json({ ok: true, membership_id: memId });
+    const result = await issueInvitation(db, actor, req.body || {});
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.status(201).json(result);
   })
 );
+
+adminRouter.get('/team/invitations', requireRoles('Organization Owner', 'Organization Admin', 'Platform Super Admin'), ah(async (req, res) => {
+  const actor = getActor(req);
+  const invitations = await db.query('SELECT id,email,name,role,status,created_at,expires_at FROM organization_invitations WHERE organization_id=$1 ORDER BY created_at DESC', [actor.organizationId]);
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.json(invitations);
+}));
+adminRouter.post('/team/invitations/:id/revoke', requireRoles('Organization Owner', 'Organization Admin', 'Platform Super Admin'), ah(async (req, res) => {
+  await revokeInvitation(db, getActor(req), String(req.params.id));
+  res.json({ ok: true });
+}));
 
 adminRouter.get(
   '/automations',
@@ -420,7 +377,7 @@ adminRouter.get(
       db.query<any>(
         `SELECT n.*, p.name as property_name
          FROM notifications n
-         LEFT JOIN properties p ON p.id = n.property_id
+         LEFT JOIN properties p ON p.id = n.property_id AND p.organization_id = n.organization_id
          WHERE n.organization_id = $1
          ORDER BY n.created_at DESC
          LIMIT 40`,
@@ -430,7 +387,7 @@ adminRouter.get(
 
     res.json({
       rules: rules.map((r) => ({ ...r, enabled: Boolean(r.enabled), quiet_hours_respected: Boolean(r.quiet_hours_respected) })),
-      notifications,
+      notifications: notifications.filter((n) => !n.property_id || canAccessProperty(actor, n.property_id)),
     });
   })
 );
@@ -475,7 +432,7 @@ adminRouter.get(
     const rows = await db.query<any>(
       `SELECT f.*, p.name as property_name
        FROM feedback f
-       JOIN properties p ON p.id = f.property_id
+       JOIN properties p ON p.id = f.property_id AND p.organization_id = f.organization_id
        WHERE f.organization_id = $1
        ORDER BY f.created_at DESC`,
       [actor.organizationId]
@@ -489,6 +446,9 @@ adminRouter.patch(
   requireRoles('Platform Super Admin', 'Organization Owner', 'Organization Admin', 'Property Manager', 'Concierge'),
   ah(async (req, res) => {
     const actor = getActor(req);
+    const feedback = await db.queryOne<any>('SELECT property_id FROM feedback WHERE id=$1 AND organization_id=$2', [req.params.id, actor.organizationId]);
+    if (!feedback) return res.status(404).json({ error: 'Feedback not found.' });
+    await authorizeProperty(db, actor, feedback.property_id);
     await db.execute('UPDATE feedback SET follow_up_status = $1 WHERE id = $2 AND organization_id = $3', [
       req.body?.follow_up_status || 'Followed Up',
       req.params.id,
@@ -506,13 +466,13 @@ adminRouter.get(
     const rows = await db.query(
       `SELECT a.*, p.name as property_name
        FROM audit_logs a
-       LEFT JOIN properties p ON p.id = a.property_id
+       LEFT JOIN properties p ON p.id = a.property_id AND p.organization_id = a.organization_id
        WHERE a.organization_id = $1
        ORDER BY a.created_at DESC
        LIMIT 100`,
       [actor.organizationId]
     );
-    res.json(rows);
+    res.json(rows.filter((row: any) => !row.property_id || canAccessProperty(actor, row.property_id)));
   })
 );
 
