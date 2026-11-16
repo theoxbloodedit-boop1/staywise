@@ -41,9 +41,15 @@ export function PrintableGuidePage({ propertyId }: { propertyId: string }) {
 
   const { property, guidebook, sections } = data;
   const visible = sections.filter((s) => s.is_visible);
+  const fontClass =
+    guidebook?.typography_style === 'Editorial Serif'
+      ? 'font-serif'
+      : guidebook?.typography_style === 'Classic Hospitality'
+        ? 'font-display tracking-wide'
+        : 'font-sans';
 
   return (
-    <div className="min-h-screen bg-slate-100 py-8 px-4 print:bg-white print:p-0">
+    <div className={`min-h-screen bg-slate-100 py-8 px-4 print:bg-white print:p-0 ${fontClass}`}>
       <div className="max-w-3xl mx-auto mb-4 flex items-center justify-between no-print">
         <div className="text-xs text-slate-600">
           Printable Welcome Book Export · Use Save as PDF in print dialog

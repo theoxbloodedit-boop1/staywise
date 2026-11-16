@@ -93,8 +93,16 @@ export const SCHEMA_STATEMENTS: string[] = [
     require_pre_arrival_inspection INTEGER NOT NULL DEFAULT 1,
     terms_accepted_at TEXT,
     privacy_accepted_at TEXT,
+    crm_stage TEXT NOT NULL DEFAULT 'Active',
+    account_status TEXT NOT NULL DEFAULT 'Active',
+    crm_notes TEXT NOT NULL DEFAULT '',
+    last_contacted_at TEXT,
     created_at TEXT NOT NULL
   )`,
+  `ALTER TABLE organizations ADD COLUMN IF NOT EXISTS crm_stage TEXT NOT NULL DEFAULT 'Active'`,
+  `ALTER TABLE organizations ADD COLUMN IF NOT EXISTS account_status TEXT NOT NULL DEFAULT 'Active'`,
+  `ALTER TABLE organizations ADD COLUMN IF NOT EXISTS crm_notes TEXT NOT NULL DEFAULT ''`,
+  `ALTER TABLE organizations ADD COLUMN IF NOT EXISTS last_contacted_at TEXT`,
   `CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     neon_auth_id TEXT UNIQUE,
@@ -375,6 +383,7 @@ export const SCHEMA_STATEMENTS: string[] = [
   `CREATE INDEX IF NOT EXISTS idx_cleaning_org_status ON cleaning_tasks (organization_id, status)`,
   `CREATE INDEX IF NOT EXISTS idx_incidents_org_prop ON incidents (organization_id, property_id, status)`,
   `CREATE INDEX IF NOT EXISTS idx_audit_org_created ON audit_logs (organization_id, created_at DESC)`,
+  `CREATE INDEX IF NOT EXISTS idx_organizations_crm_stage ON organizations (crm_stage, account_status)`,
 ];
 
 export async function initSchema() {

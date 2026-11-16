@@ -84,12 +84,29 @@ export async function resolveGuestVerification(
   return { valid: true, reservation };
 }
 
+const DEFAULT_PLATFORM_ADMIN_EMAILS = ['theoxbloodedit@gmail.com'];
+
+export function isPlatformAdminEmail(email?: string | null): boolean {
+  if (!email) return false;
+  const raw = process.env.STAYWISE_PLATFORM_ADMIN_EMAILS;
+  const allowlist = raw
+    ? raw
+        .split(',')
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean)
+    : DEFAULT_PLATFORM_ADMIN_EMAILS;
+  return allowlist.includes(email.trim().toLowerCase());
+}
+
 export interface ActorContext {
   organizationId: string;
   userId: string;
   neonAuthId: string;
   actorName: string;
+  actorEmail: string;
   actorRole: string;
+  isPlatformAdmin: boolean;
+  orgAccountStatus: string;
   assignedPropertyIds: string[];
 }
 
@@ -151,12 +168,23 @@ export async function resolveSessionActor(req: Request): Promise<ActorContext | 
     }
   }
 
+  const orgRow = await db.queryOne<{ account_status?: string }>(
+    'SELECT account_status FROM organizations WHERE id = $1',
+    [membership.organization_id]
+  );
+
+  const isPlatformAdmin =
+    membership.role === 'Platform Super Admin' || isPlatformAdminEmail(user.email);
+
   return {
     organizationId: membership.organization_id,
     userId: user.id,
     neonAuthId: neonUser.sub,
     actorName: user.name,
+    actorEmail: user.email,
     actorRole: membership.role,
+    isPlatformAdmin,
+    orgAccountStatus: orgRow?.account_status || 'Active',
     assignedPropertyIds,
   };
 }
@@ -169,9 +197,20 @@ export const requireAuth: RequestHandler = ah(async (req, res, next) => {
   if (!isOperationalRole(actor.actorRole)) {
     return res.status(403).json({ error: 'Guests cannot access internal operations.' });
   }
+  if (actor.orgAccountStatus === 'Suspended' && !actor.isPlatformAdmin) {
+    return res.status(403).json({ error: 'This workspace is currently suspended. Contact Staywise support.' });
+  }
   (req as any).actor = actor;
   next();
 });
+
+export const requirePlatformAdmin: RequestHandler = (req, res, next) => {
+  const actor = getActor(req);
+  if (!actor || !actor.isPlatformAdmin) {
+    return res.status(403).json({ error: 'Platform Super Admin access required.' });
+  }
+  next();
+};
 
 export function getActor(req: Request): ActorContext {
   return (req as any).actor as ActorContext;

@@ -113,12 +113,18 @@ export function CleaningPage({
         description="Room-by-room checklists, photo evidence, and supervisor review gates. Submitting a clean never auto-marks a unit Ready."
         actions={
           canManage && (
-            <Button variant="primary" size="sm" onClick={() => setCreateOpen(true)}>
+            <Button variant="primary" size="sm" onClick={() => setCreateOpen(true)} disabled={properties.length === 0}>
               <Plus className="w-4 h-4" /> Create Cleaning Task
             </Button>
           )
         }
       />
+
+      {properties.length === 0 && (
+        <Card className="p-6 text-center text-xs text-slate-600 bg-slate-50/70">
+          Add a property under <strong>Properties</strong> first to schedule turnover cleanings and checklists.
+        </Card>
+      )}
 
       {/* Status Filter Pills */}
       <div className="flex flex-wrap gap-1.5">

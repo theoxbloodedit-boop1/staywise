@@ -34,6 +34,7 @@ export const KNOWN_APP_SUBROUTES: Record<string, AppRoute> = {
   '/app/automations': 'automations',
   '/app/feedback': 'feedback',
   '/app/audit-logs': 'settings',
+  '/app/crm-admin': 'crm-admin',
 };
 
 export function isPublicMarketingPath(pathname: string): boolean {

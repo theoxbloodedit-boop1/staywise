@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
+  BookOpen,
+  Building2,
   QrCode,
   Printer,
   Copy,
@@ -13,6 +15,7 @@ import {
   Trash2,
   Lock,
   CheckCircle2,
+  AlertCircle,
 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { Badge, Button, Card, Input, Modal, PageHeader, Select, TextArea } from '../components/ui';
@@ -23,9 +26,11 @@ import type { Guidebook, GuidebookSection, Property } from '../lib/types';
 export function GuidebookStudioPage({
   orgId,
   initialPropertyId,
+  onNavigateProperties,
 }: {
   orgId: string;
   initialPropertyId?: string | null;
+  onNavigateProperties?: () => void;
 }) {
   const [properties, setProperties] = useState<Property[]>([]);
   const [selectedPropId, setSelectedPropId] = useState<string>(initialPropertyId || '');
@@ -33,31 +38,57 @@ export function GuidebookStudioPage({
   const [guidebook, setGuidebook] = useState<Guidebook | null>(null);
   const [sections, setSections] = useState<GuidebookSection[]>([]);
   const [activeKey, setActiveKey] = useState<string>('welcome');
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [saving, setSaving] = useState(false);
   const [savedNotice, setSavedNotice] = useState('');
   const [qrOpen, setQrOpen] = useState(false);
   const [dupOpen, setDupOpen] = useState(false);
   const [dupTargetId, setDupTargetId] = useState('');
 
-  useEffect(() => {
-    apiFetch<Property[]>('/api/properties').then((list) => {
+  const loadWorkspaceProperties = async () => {
+    setLoading(true);
+    setLoadError('');
+    try {
+      const list = await apiFetch<Property[]>('/api/properties');
       setProperties(list);
       const nextId =
         initialPropertyId && list.some((p) => p.id === initialPropertyId)
           ? initialPropertyId
           : list[0]?.id || '';
       setSelectedPropId(nextId);
-    });
+      if (!nextId) {
+        setProperty(null);
+        setGuidebook(null);
+        setSections([]);
+        setLoading(false);
+      }
+    } catch (err: any) {
+      setLoadError(err?.message || 'Unable to load workspace properties.');
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadWorkspaceProperties();
   }, [orgId, initialPropertyId]);
 
   const loadGuidebook = async (propId: string) => {
     if (!propId) return;
-    const res = await apiFetch(`/api/guidebooks/${propId}`);
-    setProperty(res.property);
-    setGuidebook(res.guidebook);
-    setSections(res.sections);
-    if (!res.sections.some((s: GuidebookSection) => s.section_key === activeKey)) {
-      setActiveKey(res.sections[0]?.section_key || 'welcome');
+    setLoading(true);
+    setLoadError('');
+    try {
+      const res = await apiFetch(`/api/guidebooks/${propId}`);
+      setProperty(res.property);
+      setGuidebook(res.guidebook);
+      setSections(res.sections);
+      if (!res.sections.some((s: GuidebookSection) => s.section_key === activeKey)) {
+        setActiveKey(res.sections[0]?.section_key || 'welcome');
+      }
+    } catch (err: any) {
+      setLoadError(err?.message || 'Unable to load Welcome Book studio for this property.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -144,8 +175,78 @@ export function GuidebookStudioPage({
     notifySaved('Template duplicated cleanly (credentials preserved)');
   };
 
-  if (!property || !guidebook) {
-    return <div className="p-8 text-sm text-slate-500">Loading Welcome Book Studio...</div>;
+  if (loading) {
+    return (
+      <div className="space-y-5">
+        <PageHeader
+          title="Digital Welcome Book Studio"
+          description="No-code structured guidebook editor covering all 8 stay sections with live mobile preview, QR access, and PDF export."
+        />
+        <Card className="p-8 text-sm text-slate-500">Loading Welcome Book Studio...</Card>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="space-y-5">
+        <PageHeader
+          title="Digital Welcome Book Studio"
+          description="No-code structured guidebook editor covering all 8 stay sections with live mobile preview, QR access, and PDF export."
+        />
+        <Card className="p-8 text-center space-y-3 border-red-200 bg-red-50/40">
+          <AlertCircle className="w-6 h-6 text-red-600 mx-auto" />
+          <div className="text-sm font-semibold text-slate-900">Unable to load Welcome Book Studio</div>
+          <p className="text-xs text-slate-600 max-w-md mx-auto">{loadError}</p>
+          <Button size="sm" variant="primary" onClick={loadWorkspaceProperties}>
+            Retry
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  if (properties.length === 0 || !property || !guidebook) {
+    return (
+      <div className="space-y-5">
+        <PageHeader
+          title="Digital Welcome Book Studio"
+          description="No-code structured guidebook editor covering all 8 stay sections with live mobile preview, QR access, and PDF export."
+          actions={
+            onNavigateProperties && (
+              <Button size="sm" variant="primary" onClick={onNavigateProperties}>
+                <Plus className="w-4 h-4" /> Add Your First Property
+              </Button>
+            )
+          }
+        />
+        <Card className="p-10 text-center space-y-3 max-w-xl mx-auto">
+          <div className="w-11 h-11 rounded-lg bg-teal-50 border border-teal-200 text-teal-700 flex items-center justify-center mx-auto">
+            <BookOpen className="w-5 h-5" />
+          </div>
+          <h2 className="text-base font-bold text-slate-900">No properties in this workspace yet</h2>
+          <p className="text-xs text-slate-600 leading-relaxed max-w-md mx-auto">
+            Add your first rental unit in Properties. Staywise automatically provisions a ready-to-edit 8-section
+            mobile Welcome Book, QR link, printable PDF, and AES-256-GCM lock &amp; Wi-Fi vault for every property.
+          </p>
+          <div className="pt-2 flex flex-wrap items-center justify-center gap-2">
+            {onNavigateProperties && (
+              <Button size="sm" variant="primary" onClick={onNavigateProperties}>
+                <Building2 className="w-4 h-4" /> Go to Properties &amp; Add Unit
+              </Button>
+            )}
+            <a
+              href="/guest/barton-creek-modern?code=STAY-4821"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md border border-slate-200 text-slate-700 hover:bg-slate-50"
+            >
+              <ExternalLink className="w-3.5 h-3.5 text-teal-700" /> View Example Welcome Book
+            </a>
+          </div>
+        </Card>
+      </div>
+    );
   }
 
   return (

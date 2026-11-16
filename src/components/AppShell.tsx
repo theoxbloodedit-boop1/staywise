@@ -12,6 +12,7 @@ import {
   BellRing,
   MessageSquareHeart,
   ShieldCheck,
+  BriefcaseBusiness,
   ExternalLink,
   Menu,
   X,
@@ -35,14 +36,16 @@ export type AppRoute =
   | 'team'
   | 'automations'
   | 'feedback'
-  | 'settings';
+  | 'settings'
+  | 'crm-admin';
 
 interface NavItem {
   id: AppRoute;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   roles: UserRole[];
-  section: 'core' | 'ops' | 'org';
+  section: 'core' | 'ops' | 'org' | 'platform';
+  requiresPlatformAdmin?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -130,6 +133,14 @@ const NAV_ITEMS: NavItem[] = [
     roles: ['Platform Super Admin', 'Organization Owner', 'Organization Admin'],
     section: 'org',
   },
+  {
+    id: 'crm-admin',
+    label: 'SaaS CRM Admin',
+    icon: BriefcaseBusiness,
+    roles: ['Platform Super Admin', 'Organization Owner', 'Organization Admin', 'Property Manager'],
+    section: 'platform',
+    requiresPlatformAdmin: true,
+  },
 ];
 
 export function AppShell({
@@ -157,9 +168,11 @@ export function AppShell({
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const visibleItems = NAV_ITEMS.filter((i) => i.roles.includes(session.actorRole));
+  const visibleItems = NAV_ITEMS.filter(
+    (i) => i.roles.includes(session.actorRole) && (!i.requiresPlatformAdmin || Boolean(session.isPlatformAdmin))
+  );
 
-  const renderNavSection = (title: string, sectionKey: 'core' | 'ops' | 'org') => {
+  const renderNavSection = (title: string, sectionKey: 'core' | 'ops' | 'org' | 'platform') => {
     const items = visibleItems.filter((i) => i.section === sectionKey);
     if (items.length === 0) return null;
     return (
@@ -243,8 +256,9 @@ export function AppShell({
       <nav className="flex-1 overflow-y-auto px-2.5 py-4">
         {renderNavSection('Portfolio & Guest', 'core')}
         {renderNavSection('Field Operations', 'ops')}
-        {renderNavSection('Governance & Growth', 'org')}
-      </nav>
+          {renderNavSection('Governance & Growth', 'org')}
+          {renderNavSection('Founder SaaS Control', 'platform')}
+        </nav>
 
       {/* Active Actor & Session Controls */}
       <div className="p-3 border-t border-slate-200 bg-slate-50/70 space-y-2.5">
@@ -260,7 +274,9 @@ export function AppShell({
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-xs font-semibold text-slate-900 truncate">{session.actorName}</div>
-              <div className="text-[11px] text-teal-700 font-medium truncate">{session.actorRole}</div>
+              <div className="text-[11px] text-teal-700 font-medium truncate">
+                {session.isPlatformAdmin ? `${session.actorRole} · Founder` : session.actorRole}
+              </div>
             </div>
           </div>
           <button

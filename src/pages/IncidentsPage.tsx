@@ -115,11 +115,17 @@ export function IncidentsPage({
         title="Incidents & Maintenance Work Orders"
         description="Track every guest complaint and property issue from New → Assigned → In Progress → Awaiting Verification → Resolved."
         actions={
-          <Button variant="primary" size="sm" onClick={() => setCreateOpen(true)}>
+          <Button variant="primary" size="sm" onClick={() => setCreateOpen(true)} disabled={properties.length === 0}>
             <Plus className="w-4 h-4" /> Log Incident / Work Order
           </Button>
         }
       />
+
+      {properties.length === 0 && (
+        <Card className="p-6 text-center text-xs text-slate-600 bg-slate-50/70">
+          Add a property under <strong>Properties</strong> first before logging maintenance work orders.
+        </Card>
+      )}
 
       <div className="grid lg:grid-cols-12 gap-5 items-start">
         <div className="lg:col-span-7 space-y-2.5">

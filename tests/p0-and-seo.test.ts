@@ -13,6 +13,7 @@ import {
 import { PUBLIC_SEO_META, getSeoMetaForPath } from '../src/seo/Seo.js';
 import { PUBLIC_PAGE_PATHS } from '../src/routes.js';
 import { GUIDEBOOK_TEMPLATES } from '../src/pages/TemplatesPage.js';
+import { isPlatformAdminEmail } from '../server/domain.js';
 
 test('cn() resolves conflicting Tailwind classes cleanly via tailwind-merge', () => {
   const merged = cn('bg-slate-900 text-white border-slate-900', 'bg-white text-slate-900 border-white');
@@ -99,4 +100,12 @@ test('SEO metadata, public routes, and 12 guidebook templates are complete and c
   assert.equal(PUBLIC_SEO_META['/auth'].noindex, true);
   assert.equal(PUBLIC_SEO_META['/404'].noindex, true);
   assert.equal(PUBLIC_SEO_META['/404'].is404, true);
+});
+
+test('isPlatformAdminEmail enforces strict founder email allowlist', () => {
+  assert.equal(isPlatformAdminEmail('theoxbloodedit@gmail.com'), true);
+  assert.equal(isPlatformAdminEmail('  THEOXBLOODEDIT@GMAIL.COM  '), true);
+  assert.equal(isPlatformAdminEmail('claire@sunbeltstays.com'), false);
+  assert.equal(isPlatformAdminEmail(''), false);
+  assert.equal(isPlatformAdminEmail(null), false);
 });

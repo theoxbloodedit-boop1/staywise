@@ -301,9 +301,15 @@ export function GuestPortalPage({ slug }: { slug: string }) {
   const coverSrc: string = guidebook?.cover_image || property.cover_image || '';
   const localStemMatch = coverSrc.match(/^\/images\/([a-z0-9-]+)\.(jpg|jpeg|png|webp)$/i);
   const localStem = localStemMatch ? localStemMatch[1] : null;
+  const fontClass =
+    guidebook?.typography_style === 'Editorial Serif'
+      ? 'font-serif'
+      : guidebook?.typography_style === 'Classic Hospitality'
+        ? 'font-display tracking-wide'
+        : 'font-sans';
 
   return (
-    <div className="min-h-screen bg-slate-100 pb-20">
+    <div className={`min-h-screen bg-slate-100 pb-20 ${fontClass}`}>
       {/* Mobile-first Centered Shell */}
       <div className="max-w-xl mx-auto min-h-screen bg-white shadow-sm border-x border-slate-200 flex flex-col">
         {/* Hero Cover */}

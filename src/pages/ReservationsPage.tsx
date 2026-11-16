@@ -80,11 +80,17 @@ export function ReservationsPage({ orgId }: { orgId: string }) {
         title="Reservations & Stay Access"
         description="Associate guest stays, generate stay-gated access links, and link automated turnover cleaning tasks."
         actions={
-          <Button variant="primary" size="sm" onClick={() => setModalOpen(true)}>
+          <Button variant="primary" size="sm" onClick={() => setModalOpen(true)} disabled={properties.length === 0}>
             <Plus className="w-4 h-4" /> New Manual Reservation
           </Button>
         }
       />
+
+      {properties.length === 0 && (
+        <Card className="p-6 text-center text-xs text-slate-600 bg-slate-50/70">
+          Add at least one property under <strong>Properties</strong> first before issuing guest stay access codes.
+        </Card>
+      )}
 
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">

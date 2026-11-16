@@ -15,6 +15,7 @@ import { incidentsRouter } from './routes/incidents.js';
 import { inspectionsRouter } from './routes/inspections.js';
 import { guestRouter } from './routes/guest.js';
 import { adminRouter } from './routes/admin.js';
+import { platformCrmRouter } from './routes/platformCrm.js';
 import { APP_SHELL_HTML, NOT_FOUND_HTML, ROUTE_HTML } from './generated-shell.js';
 
 export const app = express();
@@ -210,6 +211,7 @@ app.use('/api/incidents', incidentsRouter);
 app.use('/api/inspections', inspectionsRouter);
 app.use('/api/guest', guestRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/platform-crm', platformCrmRouter);
 
 // Strict HTTP 404 for unknown API endpoints
 app.use('/api/*', (_req, res) => {
@@ -248,6 +250,7 @@ export function isKnownSpaRoute(urlPath: string): boolean {
     '/app/automations',
     '/app/feedback',
     '/app/audit-logs',
+    '/app/crm-admin',
   ];
   return knownAppPaths.includes(clean);
 }

@@ -44,7 +44,7 @@ export function MobileGuidePreview({
     guidebook.typography_style === 'Editorial Serif'
       ? 'font-serif'
       : guidebook.typography_style === 'Classic Hospitality'
-        ? 'tracking-wide'
+        ? 'font-display tracking-wide'
         : 'font-sans';
 
   return (

@@ -23,6 +23,10 @@ export interface Organization {
   property_limit: number;
   require_cleaning_approval: number;
   require_pre_arrival_inspection: number;
+  crm_stage?: string;
+  account_status?: string;
+  crm_notes?: string;
+  last_contacted_at?: string | null;
 }
 
 export interface OrgMember {
@@ -45,6 +49,7 @@ export interface SessionContext {
   userId: string;
   actorName: string;
   actorRole: UserRole;
+  isPlatformAdmin?: boolean;
 }
 
 export interface ReadinessResult {

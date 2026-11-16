@@ -101,15 +101,21 @@ export function InspectionsPage({ orgId }: { orgId: string }) {
         description="Document asset conditions and pre-arrival / post-departure discrepancies neutrally without automatically assigning legal blame."
         actions={
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={() => setAssetModal(true)}>
+            <Button size="sm" variant="outline" onClick={() => setAssetModal(true)} disabled={properties.length === 0}>
               <Plus className="w-4 h-4" /> Register Asset
             </Button>
-            <Button size="sm" variant="primary" onClick={() => openInspectionRunner(properties[0]?.id || '')}>
+            <Button size="sm" variant="primary" onClick={() => openInspectionRunner(properties[0]?.id || '')} disabled={properties.length === 0}>
               <ClipboardCheck className="w-4 h-4" /> Run Inspection
             </Button>
           </div>
         }
       />
+
+      {properties.length === 0 && (
+        <Card className="p-6 text-center text-xs text-slate-600 bg-slate-50/70">
+          Add a property under <strong>Properties</strong> first to register tracked inventory assets and inspections.
+        </Card>
+      )}
 
       <div className="grid lg:grid-cols-12 gap-5">
         <Card className="lg:col-span-6 overflow-hidden">

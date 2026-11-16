@@ -16,8 +16,17 @@ CREATE TABLE IF NOT EXISTS organizations (
   require_pre_arrival_inspection INTEGER NOT NULL DEFAULT 1,
   terms_accepted_at TEXT,
   privacy_accepted_at TEXT,
+  crm_stage TEXT NOT NULL DEFAULT 'Active',
+  account_status TEXT NOT NULL DEFAULT 'Active',
+  crm_notes TEXT NOT NULL DEFAULT '',
+  last_contacted_at TEXT,
   created_at TEXT NOT NULL
 );
+
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS crm_stage TEXT NOT NULL DEFAULT 'Active';
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS account_status TEXT NOT NULL DEFAULT 'Active';
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS crm_notes TEXT NOT NULL DEFAULT '';
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS last_contacted_at TEXT;
 
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db.js';
-import { ah, getActor, logAudit, nowIso, requireAuth, resolveNeonJwt, uid } from '../domain.js';
+import { ah, getActor, isPlatformAdminEmail, logAudit, nowIso, requireAuth, resolveNeonJwt, uid } from '../domain.js';
 import { createRateLimiter, getNeonAuthBaseUrl } from '../security.js';
 import { DEFAULT_PLAN_TIER, getPlanSpec, parsePlanTier } from '../../src/lib/plans.js';
 
@@ -119,6 +119,9 @@ authRouter.get(
       assignedPropertyIds = ['*'];
     }
 
+    const isPlatformAdmin =
+      activeMembership.role === 'Platform Super Admin' || isPlatformAdminEmail(user.email);
+
     res.json({
       authenticated: true,
       needsOnboarding: false,
@@ -129,6 +132,7 @@ authRouter.get(
         avatar_initials: user.avatar_initials,
         role: activeMembership.role,
         organizationId: activeMembership.organization_id,
+        isPlatformAdmin,
         assignedPropertyIds,
       },
       neonUser,

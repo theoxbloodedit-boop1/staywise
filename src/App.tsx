@@ -26,6 +26,7 @@ const FeedbackPage = lazy(() => import('./pages/FeedbackBillingPage').then((m) =
 const SettingsBillingAuditPage = lazy(() =>
   import('./pages/FeedbackBillingPage').then((m) => ({ default: m.SettingsBillingAuditPage }))
 );
+const PlatformCrmPage = lazy(() => import('./pages/PlatformCrmPage').then((m) => ({ default: m.PlatformCrmPage })));
 
 function defaultRouteForRole(role: UserRole): AppRoute {
   switch (role) {
@@ -124,6 +125,7 @@ export default function App() {
           userId: res.user.id,
           actorName: res.user.name,
           actorRole: res.user.role,
+          isPlatformAdmin: Boolean(res.user.isPlatformAdmin),
         };
         setOnboardingUser(null);
         setSession(nextSess);
@@ -132,7 +134,14 @@ export default function App() {
         setCurrentOrg(res.organization || null);
         setMembers(res.members || []);
         setAuthenticated(true);
-        if (pathname === '/app' || pathname === '/app/dashboard') {
+        const mappedSubroute = KNOWN_APP_SUBROUTES[pathname];
+        if (mappedSubroute && mappedSubroute !== 'dashboard') {
+          setActiveRoute(
+            mappedSubroute === 'crm-admin' && !nextSess.isPlatformAdmin
+              ? defaultRouteForRole(res.user.role)
+              : mappedSubroute
+          );
+        } else if (pathname === '/app' || pathname === '/app/dashboard') {
           setActiveRoute(defaultRouteForRole(res.user.role));
         }
       } else {
@@ -307,7 +316,11 @@ export default function App() {
               />
             )}
             {activeRoute === 'guidebooks' && (
-              <GuidebookStudioPage orgId={session.organizationId} initialPropertyId={guidebookPropId} />
+              <GuidebookStudioPage
+                orgId={session.organizationId}
+                initialPropertyId={guidebookPropId}
+                onNavigateProperties={() => setActiveRoute('properties')}
+              />
             )}
             {activeRoute === 'reservations' && <ReservationsPage orgId={session.organizationId} />}
             {activeRoute === 'cleaning' && (
@@ -332,6 +345,9 @@ export default function App() {
                   navigatePath('/');
                 }}
               />
+            )}
+            {activeRoute === 'crm-admin' && session.isPlatformAdmin && (
+              <PlatformCrmPage currentOrgId={session.organizationId} />
             )}
           </Suspense>
         </AppShell>
