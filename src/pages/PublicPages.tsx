@@ -12,10 +12,10 @@ import {
   QrCode,
   ShieldCheck,
   Sparkles,
-  Wrench,
 } from 'lucide-react';
 import { Badge, Button, Card } from '../components/ui';
 import { PublicHeader, PublicFooter } from '../components/PublicChrome';
+import { PLAN_LIST } from '../lib/plans';
 
 export function FeaturesPage({
   onNavigatePath,
@@ -31,31 +31,43 @@ export function FeaturesPage({
       icon: BookOpen,
       title: '8-Section Mobile Welcome Books',
       desc: 'Publish structured guides covering welcome notes, step-by-step arrival, house rules, Wi-Fi & appliances, local spots, emergency details, transit, and check-out.',
+      href: '/guest-guidebook',
+      linkText: 'Explore Welcome Books',
     },
     {
       icon: QrCode,
       title: 'QR Cards & Printable PDF Export',
       desc: 'Generate a scannable QR card and formatted print layout for every unit so guests can access house info even offline.',
+      href: '/templates',
+      linkText: 'View 12 Property Templates',
     },
     {
       icon: KeyRound,
       title: 'Time-Gated Smart-Lock & Wi-Fi Vault',
       desc: 'Door PINs and Wi-Fi passwords stay encrypted at rest (AES-256-GCM) and masked until a guest verifies an active stay code inside their arrival window.',
+      href: '/security',
+      linkText: 'Inspect Security Controls',
     },
     {
       icon: Bot,
       title: 'Grounded Guest Assistant + Escalation',
       desc: 'Answers routine questions strictly from your approved property guide and routes unverified requests—such as early check-in or emergency leaks—to your team.',
+      href: '/guest-guidebook',
+      linkText: 'See Guest AI Workflow',
     },
     {
       icon: Camera,
       title: 'Photo-Verified Cleaning Checklists',
       desc: 'Room-by-room checklists with photo uploads and supervisor review sign-off before a unit moves to Ready.',
+      href: '/turnover-management',
+      linkText: 'See Turnover Gates',
     },
     {
       icon: ClipboardCheck,
       title: 'Pre-Arrival Inspections & Work Orders',
       desc: 'Track property inventory items, flag discrepancies neutrally, and link guest support tickets straight to maintenance work orders.',
+      href: '/turnover-management',
+      linkText: 'Explore Work Orders',
     },
   ];
 
@@ -69,22 +81,22 @@ export function FeaturesPage({
       />
       <main className="flex-1 py-12 sm:py-16 px-4 sm:px-6 max-w-7xl mx-auto w-full space-y-12">
         <div className="max-w-2xl space-y-4">
-          <Badge variant="brand">Platform Overview</Badge>
+          <Badge variant="brand">Platform Overview · 100% Free Full Access</Badge>
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900">
             Every workflow between guest check-in and property turnover
           </h1>
           <p className="text-base text-slate-600 leading-relaxed">
-            Staywise connects guest-facing welcome books with the internal cleaning, inspection, and maintenance steps your team actually runs between stays.
+            Staywise connects guest-facing welcome books with the internal cleaning, inspection, and maintenance steps your team runs between stays—completely free right now with all capabilities unlocked.
           </p>
           <div className="flex flex-wrap gap-3 pt-1">
-            <Button variant="primary" size="lg" onClick={() => onOpenAuth('register', 'Starter')}>
+            <Button variant="primary" size="lg" className="min-h-[44px]" onClick={() => onOpenAuth('register', 'Starter')}>
               Create Free Workspace <ArrowRight className="w-4 h-4" />
             </Button>
             <a
               href="/guest/barton-creek-modern?code=STAY-4821"
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center justify-center h-10 px-4 rounded-md border border-slate-200 text-sm font-medium text-slate-800 hover:bg-slate-50"
+              className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-md border border-slate-200 text-sm font-medium text-slate-800 hover:bg-slate-50"
             >
               Try Unlocked Guest Demo
             </a>
@@ -95,12 +107,21 @@ export function FeaturesPage({
           {modules.map((m) => {
             const Icon = m.icon;
             return (
-              <Card key={m.title} className="p-6 rounded-2xl space-y-3">
-                <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-800 flex items-center justify-center">
-                  <Icon className="w-5 h-5" />
+              <Card key={m.title} className="p-6 rounded-2xl flex flex-col justify-between space-y-4">
+                <div className="space-y-3">
+                  <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-800 flex items-center justify-center">
+                    <Icon className="w-5 h-5" />
+                  </div>
+                  <h2 className="text-base font-bold text-slate-900">{m.title}</h2>
+                  <p className="text-[13px] text-slate-600 leading-relaxed">{m.desc}</p>
                 </div>
-                <h2 className="text-base font-bold text-slate-900">{m.title}</h2>
-                <p className="text-[13px] text-slate-600 leading-relaxed">{m.desc}</p>
+                <button
+                  type="button"
+                  onClick={() => onNavigatePath(m.href)}
+                  className="text-xs font-semibold text-teal-800 hover:text-teal-950 inline-flex items-center gap-1 text-left"
+                >
+                  {m.linkText} <ArrowRight className="w-3.5 h-3.5" />
+                </button>
               </Card>
             );
           })}
@@ -120,30 +141,6 @@ export function PricingPage({
   onEnterWorkspace: () => void;
   onOpenAuth: (mode: 'register' | 'login', defaultPlan?: string) => void;
 }) {
-  const tiers = [
-    {
-      tier: 'Starter',
-      planned: '$19/mo',
-      units: 'Up to 2 active units',
-      ai: '100 AI answers / month',
-      summary: 'Independent hosts replacing static house PDFs.',
-    },
-    {
-      tier: 'Professional',
-      planned: '$49/mo',
-      units: 'Up to 10 active units',
-      ai: '500 AI answers / month',
-      summary: 'Small teams coordinating weekly turnovers & fixes.',
-    },
-    {
-      tier: 'Portfolio',
-      planned: '$99/mo',
-      units: 'Up to 25 active units',
-      ai: '2,000 AI answers / month',
-      summary: 'Multi-city portfolios standardizing checklists & inspections.',
-    },
-  ];
-
   return (
     <div className="min-h-screen bg-white text-slate-900 flex flex-col">
       <PublicHeader
@@ -154,38 +151,63 @@ export function PricingPage({
       />
       <main className="flex-1 py-12 sm:py-16 px-4 sm:px-6 max-w-6xl mx-auto w-full space-y-10">
         <div className="max-w-2xl space-y-3">
-          <Badge variant="brand">Early Access Pricing</Badge>
+          <Badge variant="brand">100% Free Full Access</Badge>
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900">
-            Free during Alpha. Transparent limits at launch.
+            Free full access to every Staywise feature — no credit card required
           </h1>
           <p className="text-base text-slate-600">
-            Stripe checkout is intentionally disabled during Early Access—choose any tier below to provision your workspace at $0/month with no card required.
+            Billing checkout is completely disabled while we’re in Early Access. Every workspace gets full access to guidebooks, encrypted lock vaults, grounded AI replies, cleaning checklists, inspections, and work orders at $0/month.
           </p>
         </div>
 
         <div className="grid md:grid-cols-3 gap-6">
-          {tiers.map((t) => (
-            <Card key={t.tier} className="p-6 rounded-2xl flex flex-col justify-between space-y-6">
-              <div className="space-y-3">
-                <h2 className="text-lg font-bold text-slate-900">{t.tier}</h2>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold text-slate-900">$0</span>
-                  <span className="text-xs text-teal-800 font-medium">in Alpha</span>
-                  <span className="text-xs text-slate-500 line-through ml-auto">{t.planned}</span>
+          {PLAN_LIST.map((t) => {
+            const highlight = t.tier === 'Professional';
+            return (
+              <Card
+                key={t.tier}
+                className={`p-6 rounded-2xl flex flex-col justify-between space-y-6 ${
+                  highlight ? 'border-slate-900 ring-1 ring-slate-900 shadow-md' : ''
+                }`}
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-bold text-slate-900">{t.label}</h2>
+                    {t.badge && <Badge variant="brand">{t.badge}</Badge>}
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-bold text-slate-900">$0</span>
+                    <span className="text-xs text-teal-800 font-medium">/ month · Full Access</span>
+                  </div>
+                  <p className="text-xs text-slate-600">{t.summary}</p>
+                  <ul className="space-y-2 text-xs text-slate-700 pt-3 border-t border-slate-100">
+                    {t.highlights.map((h) => (
+                      <li key={h} className="flex items-start gap-2">
+                        <Check className="w-4 h-4 text-teal-800 shrink-0 mt-0.5" />
+                        <span>{h}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <p className="text-xs text-slate-600">{t.summary}</p>
-                <ul className="space-y-2 text-xs text-slate-700 pt-3 border-t border-slate-100">
-                  <li className="flex items-center gap-2"><Check className="w-4 h-4 text-teal-800" /> {t.units}</li>
-                  <li className="flex items-center gap-2"><Check className="w-4 h-4 text-teal-800" /> {t.ai}</li>
-                  <li className="flex items-center gap-2"><Check className="w-4 h-4 text-teal-800" /> Full JSON export & deletion</li>
-                </ul>
-              </div>
-              <Button variant="primary" size="lg" className="w-full" onClick={() => onOpenAuth('register', t.tier)}>
-                Start {t.tier} Free
-              </Button>
-            </Card>
-          ))}
+                <Button
+                  variant={highlight ? 'primary' : 'outline'}
+                  size="lg"
+                  className="w-full min-h-[44px]"
+                  onClick={() => onOpenAuth('register', t.tier)}
+                >
+                  Start {t.label} Free
+                </Button>
+              </Card>
+            );
+          })}
         </div>
+
+        <Card className="p-6 rounded-2xl bg-slate-50 border-slate-200 space-y-2">
+          <h2 className="text-sm font-bold text-slate-900">Pricing Questions</h2>
+          <p className="text-xs text-slate-600 leading-relaxed">
+            Can I switch capacity tiers later? Yes—Organization Owners can switch between Starter (5 units), Professional (15 units), and Portfolio (50 units) anytime in Workspace → Billing & Settings at $0 with instant JSON data export and self-service deletion.
+          </p>
+        </Card>
       </main>
       <PublicFooter onNavigatePath={onNavigatePath} onOpenAuth={onOpenAuth} />
     </div>

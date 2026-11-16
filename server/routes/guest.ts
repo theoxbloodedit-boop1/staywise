@@ -1,5 +1,4 @@
 import { Router, type Request } from 'express';
-import crypto from 'crypto';
 import { db } from '../db.js';
 import {
   ah,
@@ -14,57 +13,27 @@ import {
   uid,
 } from '../domain.js';
 import { createRateLimiter } from '../security.js';
+import {
+  checkRateLimitLock,
+  extractClientIp,
+  hashRateLimitKey,
+  recordRateLimitOutcome,
+} from '../lib/rate-limit.js';
 
 export const guestRouter = Router();
 
-const MAX_FAILED_CODE_ATTEMPTS = 8;
-const ATTEMPT_WINDOW_MS = 15 * 60_000;
-const LOCKOUT_MS = 15 * 60_000;
-
-function getClientIpHash(req: Request, slug: string): string {
-  const fwd = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim();
-  const ip = fwd || req.ip || req.socket.remoteAddress || 'unknown';
-  return crypto.createHash('sha256').update(`${ip}::${slug}`).digest('hex').slice(0, 48);
+function getGuestRateKey(req: Request, slug: string): string {
+  return hashRateLimitKey(extractClientIp(req), slug);
 }
 
 async function checkGuestBruteForceLock(req: Request, slug: string): Promise<{ blocked: boolean; retryAfterSec: number }> {
-  const key = getClientIpHash(req, slug);
-  const now = Date.now();
-  const row = await db.queryOne<{ fail_count: number; window_start: number; locked_until: number }>(
-    'SELECT fail_count, window_start, locked_until FROM guest_verify_attempts WHERE ip_slug = $1',
-    [key]
-  );
-  if (row && Number(row.locked_until) > now) {
-    return { blocked: true, retryAfterSec: Math.ceil((Number(row.locked_until) - now) / 1000) };
-  }
-  return { blocked: false, retryAfterSec: 0 };
+  const res = await checkRateLimitLock(getGuestRateKey(req, slug));
+  return { blocked: res.blocked, retryAfterSec: res.retryAfterSec };
 }
 
 async function recordGuestCodeAttempt(req: Request, slug: string, valid: boolean, orgId?: string, propId?: string) {
-  const key = getClientIpHash(req, slug);
-  const now = Date.now();
-  if (valid) {
-    await db.execute('DELETE FROM guest_verify_attempts WHERE ip_slug = $1', [key]);
-    return;
-  }
-  const existing = await db.queryOne<{ fail_count: number; window_start: number; locked_until: number }>(
-    'SELECT fail_count, window_start, locked_until FROM guest_verify_attempts WHERE ip_slug = $1',
-    [key]
-  );
-  let nextCount = 1;
-  let windowStart = now;
-  if (existing && now - Number(existing.window_start) < ATTEMPT_WINDOW_MS) {
-    nextCount = Number(existing.fail_count) + 1;
-    windowStart = Number(existing.window_start);
-  }
-  const lockedUntil = nextCount >= MAX_FAILED_CODE_ATTEMPTS ? now + LOCKOUT_MS : 0;
-  await db.execute(
-    `INSERT INTO guest_verify_attempts (ip_slug, fail_count, window_start, locked_until)
-     VALUES ($1, $2, $3, $4)
-     ON CONFLICT (ip_slug) DO UPDATE SET fail_count = $2, window_start = $3, locked_until = $4`,
-    [key, nextCount, windowStart, lockedUntil]
-  );
-  if (lockedUntil > 0 && orgId && propId) {
+  const outcome = await recordRateLimitOutcome(getGuestRateKey(req, slug), valid);
+  if (outcome.newlyLocked && orgId && propId) {
     await logAudit({
       organizationId: orgId,
       propertyId: propId,
@@ -73,7 +42,7 @@ async function recordGuestCodeAttempt(req: Request, slug: string, valid: boolean
       action: 'GUEST_CODE_BRUTEFORCE_BLOCKED',
       entityType: 'Property',
       entityId: propId,
-      details: `Blocked repeated invalid access code attempts on ${slug} (${nextCount} attempts in 15m).`,
+      details: `Blocked repeated invalid access code attempts on ${slug} (${outcome.failCount} attempts in 15m).`,
     });
   }
 }

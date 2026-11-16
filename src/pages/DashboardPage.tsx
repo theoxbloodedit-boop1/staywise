@@ -12,6 +12,7 @@ import {
   Building2,
 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
+import { formatMetricPercent, formatMetricScore } from '../lib/metrics';
 import { Badge, Button, Card, PageHeader, statusToBadgeVariant } from '../components/ui';
 import type { AppRoute } from '../components/AppShell';
 
@@ -113,7 +114,10 @@ export function DashboardPage({
           {
             label: 'Overdue Cleaning',
             value: ind.overdueCleaning,
-            sub: `${an.cleaningCompletionRate}% completion rate`,
+            sub:
+              an.cleaningCompletionRate === null || an.cleaningCompletionRate === undefined
+                ? 'No cleaning tasks recorded yet'
+                : `${an.cleaningCompletionRate}% completion rate`,
             tone: ind.overdueCleaning > 0 ? 'text-amber-700' : 'text-slate-900',
             route: 'cleaning' as AppRoute,
           },
@@ -284,15 +288,12 @@ export function DashboardPage({
             {[
               {
                 label: 'Property Readiness Rate',
-                value: an.readinessRate === null || an.readinessRate === undefined ? '—' : `${an.readinessRate}%`,
+                value: formatMetricPercent(an.readinessRate),
                 icon: CheckCircle2,
               },
               {
                 label: 'Cleaning Completion Rate',
-                value:
-                  an.cleaningCompletionRate === null || an.cleaningCompletionRate === undefined
-                    ? '—'
-                    : `${an.cleaningCompletionRate}%`,
+                value: formatMetricPercent(an.cleaningCompletionRate),
                 icon: Sparkles,
               },
               {
@@ -302,17 +303,13 @@ export function DashboardPage({
               },
               {
                 label: 'AI Question Deflection Rate',
-                value:
-                  an.aiDeflectionRate === null || an.aiDeflectionRate === undefined ? '—' : `${an.aiDeflectionRate}%`,
+                value: formatMetricPercent(an.aiDeflectionRate),
                 icon: Bot,
               },
               { label: 'Guest Inquiry Volume', value: `${an.guestInquiryVolume ?? 0} msgs`, icon: MessageSquare },
               {
                 label: 'Avg Guest Satisfaction',
-                value:
-                  an.avgFeedbackScore === null || an.avgFeedbackScore === undefined
-                    ? '—'
-                    : `${an.avgFeedbackScore} / 5.0`,
+                value: formatMetricScore(an.avgFeedbackScore),
                 icon: CheckCircle2,
               },
             ].map((m) => {

@@ -13,11 +13,12 @@ import {
 } from '../lib/neonAuth';
 import { Button, Card, Input, Select } from '../components/ui';
 import { REGION_PRESETS } from '../lib/format';
+import { DEFAULT_PLAN_TIER, PLAN_LIST, parsePlanTier } from '../lib/plans';
 import type { RegionCode, SessionContext } from '../lib/types';
 
 export function AuthPage({
   initialMode = 'login',
-  defaultPlan = 'Starter',
+  defaultPlan = DEFAULT_PLAN_TIER,
   onboardingUser = null,
   onBack,
   onNavigate,
@@ -39,12 +40,10 @@ export function AuthPage({
 
   const resolveInitialPlan = () => {
     if (typeof window !== 'undefined') {
-      const p = new URLSearchParams(window.location.search).get('plan');
-      if (p === 'Starter' || p === 'Professional' || p === 'Portfolio') return p;
+      const fromUrl = parsePlanTier(new URLSearchParams(window.location.search).get('plan'));
+      if (fromUrl) return fromUrl;
     }
-    return defaultPlan === 'Starter' || defaultPlan === 'Professional' || defaultPlan === 'Portfolio'
-      ? defaultPlan
-      : 'Starter';
+    return parsePlanTier(defaultPlan) || DEFAULT_PLAN_TIER;
   };
 
   const [orgName, setOrgName] = useState('');
@@ -68,8 +67,9 @@ export function AuthPage({
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (defaultPlan === 'Starter' || defaultPlan === 'Professional' || defaultPlan === 'Portfolio') {
-      setPlanTier(defaultPlan);
+    const parsed = parsePlanTier(defaultPlan);
+    if (parsed) {
+      setPlanTier(parsed);
     }
   }, [defaultPlan]);
 
@@ -351,13 +351,15 @@ export function AuthPage({
                     ))}
                   </Select>
                   <Select
-                    label="Early Access Tier (Free in Alpha)"
+                    label="Workspace Capacity Tier (100% Free Full Access)"
                     value={planTier}
                     onChange={(e) => setPlanTier(e.target.value)}
                   >
-                    <option value="Starter">Starter (2 units · Free in Alpha)</option>
-                    <option value="Professional">Professional (10 units · Free in Alpha)</option>
-                    <option value="Portfolio">Portfolio (25 units · Free in Alpha)</option>
+                    {PLAN_LIST.map((p) => (
+                      <option key={p.tier} value={p.tier}>
+                        {p.label} ({p.propertyLimit} units · $0 Free Full Access)
+                      </option>
+                    ))}
                   </Select>
                 </div>
               </>

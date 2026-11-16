@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server/index.ts",
-    "build": "vite build && tsx scripts/prerender.ts",
+    "build": "vite build && vite build --ssr src/entry-server.tsx --outDir .ssr-tmp && tsx scripts/prerender.ts && node scripts/gen-sitemap.mjs && rm -rf .ssr-tmp",
     "start": "NODE_ENV=production tsx server/index.ts",
     "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
     "db:migrate": "tsx server/migrate.ts",
     "db:seed": "tsx server/seed-cli.ts"
   },
@@ -17,6 +18,7 @@
     "@neon/neon-js": "^0.10.2",
     "@neondatabase/serverless": "^1.2.1",
     "@vercel/blob": "^2.9.0",
+    "clsx": "^2.1.1",
     "compression": "^1.8.2",
     "cookie-parser": "^1.4.7",
     "dotenv": "^18.0.10",
@@ -27,6 +29,7 @@
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "tailwind-merge": "^3.7.0",
     "ws": "^8.23.0"
   },
   "devDependencies": {

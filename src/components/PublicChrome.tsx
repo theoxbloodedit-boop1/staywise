@@ -17,24 +17,15 @@ export function PublicHeader({
 
   const navItems = [
     { label: 'Features', href: '/features' },
-    { label: 'Welcome Books', href: '/#guidebooks' },
+    { label: 'Welcome Books', href: '/guest-guidebook' },
+    { label: 'Turnovers', href: '/turnover-management' },
+    { label: 'Templates', href: '/templates' },
     { label: 'Pricing', href: '/pricing' },
     { label: 'Security', href: '/security' },
   ];
 
   const handleLinkClick = (e: React.MouseEvent, href: string) => {
     setMobileOpen(false);
-    if (href.startsWith('/#')) {
-      if (currentPath !== '/') {
-        e.preventDefault();
-        onNavigatePath('/');
-        setTimeout(() => {
-          const el = document.getElementById(href.slice(2));
-          el?.scrollIntoView({ behavior: 'smooth' });
-        }, 120);
-      }
-      return;
-    }
     e.preventDefault();
     onNavigatePath(href);
   };
@@ -68,7 +59,7 @@ export function PublicHeader({
           </div>
         </a>
 
-        <nav aria-label="Primary navigation" className="hidden md:flex items-center gap-7 text-[13px] font-medium text-slate-700">
+        <nav aria-label="Primary navigation" className="hidden lg:flex items-center gap-5 text-[13px] font-medium text-slate-700">
           {navItems.map((item) => {
             const active = currentPath === item.href;
             return (
@@ -76,7 +67,7 @@ export function PublicHeader({
                 key={item.href}
                 href={item.href}
                 onClick={(e) => handleLinkClick(e, item.href)}
-                className={`py-2 transition-colors hover:text-slate-950 ${
+                className={`py-2 transition-colors hover:text-slate-950 whitespace-nowrap ${
                   active ? 'text-teal-800 font-semibold' : ''
                 }`}
               >
@@ -94,13 +85,18 @@ export function PublicHeader({
             Workspace
           </Button>
           <Button variant="primary" size="md" onClick={() => onOpenAuth('register', 'Starter')}>
-            Create Workspace
+            Start Free
           </Button>
         </div>
 
-        <div className="flex md:hidden items-center gap-2">
-          <Button variant="primary" size="md" className="min-h-[44px]" onClick={() => onOpenAuth('register', 'Starter')}>
-            Get Started
+        <div className="flex lg:hidden items-center gap-2">
+          <Button
+            variant="primary"
+            size="md"
+            className="md:hidden min-h-[44px]"
+            onClick={() => onOpenAuth('register', 'Starter')}
+          >
+            Start Free
           </Button>
           <button
             type="button"
@@ -115,14 +111,18 @@ export function PublicHeader({
       </div>
 
       {mobileOpen && (
-        <div className="md:hidden border-t border-slate-200 bg-white px-4 py-4 space-y-2 shadow-lg">
+        <div className="lg:hidden border-t border-slate-200 bg-white px-4 py-4 space-y-2 shadow-lg">
           <nav aria-label="Mobile navigation" className="space-y-1">
             {navItems.map((item) => (
               <a
                 key={item.href}
                 href={item.href}
                 onClick={(e) => handleLinkClick(e, item.href)}
-                className="flex items-center min-h-[44px] px-3 rounded-lg text-sm font-medium text-slate-800 hover:bg-slate-50"
+                className={`flex items-center min-h-[44px] px-3 rounded-lg text-sm font-medium ${
+                  currentPath === item.href
+                    ? 'bg-teal-50 text-teal-900 font-semibold'
+                    : 'text-slate-800 hover:bg-slate-50'
+                }`}
               >
                 {item.label}
               </a>
@@ -165,6 +165,21 @@ export function PublicFooter({
   onNavigatePath: (path: string) => void;
   onOpenAuth: (mode: 'register' | 'login', defaultPlan?: string) => void;
 }) {
+  const linkClass = 'inline-flex items-center min-h-[36px] text-slate-600 hover:text-slate-950';
+
+  const navLink = (href: string, label: string) => (
+    <a
+      href={href}
+      onClick={(e) => {
+        e.preventDefault();
+        onNavigatePath(href);
+      }}
+      className={linkClass}
+    >
+      {label}
+    </a>
+  );
+
   return (
     <footer className="border-t border-slate-200 py-12 bg-slate-50 text-slate-700">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 grid grid-cols-2 md:grid-cols-4 gap-8 text-xs">
@@ -174,83 +189,36 @@ export function PublicFooter({
             Staywise
           </div>
           <p className="text-slate-600 leading-relaxed">
-            Mobile guest welcome books, rate-limited door & Wi-Fi access vaults, and turnover coordination for short-term rental teams worldwide.
+            Mobile guest welcome books, rate-limited door & Wi-Fi access vaults, and turnover coordination—100% free during Early Access.
           </p>
-          <p className="text-slate-600">
-            Staywise Software LLC · Austin, TX
-          </p>
+          <p className="text-slate-600">Staywise Software LLC · Austin, TX</p>
         </div>
 
         <div className="space-y-1">
-          <div className="font-semibold text-slate-900 mb-2">Product</div>
+          <div className="font-semibold text-slate-900 mb-2">Platform</div>
           <ul className="space-y-1">
-            <li>
-              <a
-                href="/features"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onNavigatePath('/features');
-                }}
-                className="inline-flex items-center min-h-[36px] text-slate-600 hover:text-slate-950"
-              >
-                Features & Workflows
-              </a>
-            </li>
-            <li>
-              <a
-                href="/pricing"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onNavigatePath('/pricing');
-                }}
-                className="inline-flex items-center min-h-[36px] text-slate-600 hover:text-slate-950"
-              >
-                Early Access Pricing
-              </a>
-            </li>
-            <li>
-              <a
-                href="/security"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onNavigatePath('/security');
-                }}
-                className="inline-flex items-center min-h-[36px] text-slate-600 hover:text-slate-950"
-              >
-                Security & Encryption
-              </a>
-            </li>
+            <li>{navLink('/features', 'All Features')}</li>
+            <li>{navLink('/guest-guidebook', 'Guest Welcome Books')}</li>
+            <li>{navLink('/turnover-management', 'Turnover Management')}</li>
+            <li>{navLink('/templates', '12 Guidebook Templates')}</li>
           </ul>
         </div>
 
         <div className="space-y-1">
-          <div className="font-semibold text-slate-900 mb-2">Live Demos</div>
+          <div className="font-semibold text-slate-900 mb-2">Explore & Access</div>
           <ul className="space-y-1">
+            <li>{navLink('/pricing', 'Free Early Access Plans')}</li>
+            <li>{navLink('/security', 'Security Architecture')}</li>
             <li>
-              <a
-                href="/guest/barton-creek-modern?code=STAY-4821"
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center min-h-[36px] text-slate-600 hover:text-slate-950"
-              >
-                Unlocked Guest Portal
-              </a>
-            </li>
-            <li>
-              <a
-                href="/guest/barton-creek-modern"
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center min-h-[36px] text-slate-600 hover:text-slate-950"
-              >
-                Pre-Arrival View (Locked)
+              <a href="/guest/barton-creek-modern?code=STAY-4821" target="_blank" rel="noreferrer" className={linkClass}>
+                Unlocked Guest Demo
               </a>
             </li>
             <li>
               <button
                 type="button"
                 onClick={() => onOpenAuth('register', 'Starter')}
-                className="inline-flex items-center min-h-[36px] text-slate-600 hover:text-slate-950 text-left"
+                className={`${linkClass} text-left`}
               >
                 Create Free Workspace
               </button>
@@ -261,30 +229,8 @@ export function PublicFooter({
         <div className="space-y-1">
           <div className="font-semibold text-slate-900 mb-2">Legal & Contact</div>
           <ul className="space-y-1">
-            <li>
-              <a
-                href="/privacy"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onNavigatePath('/privacy');
-                }}
-                className="inline-flex items-center min-h-[36px] text-slate-600 hover:text-slate-950"
-              >
-                Privacy Policy
-              </a>
-            </li>
-            <li>
-              <a
-                href="/terms"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onNavigatePath('/terms');
-                }}
-                className="inline-flex items-center min-h-[36px] text-slate-600 hover:text-slate-950"
-              >
-                Terms of Service
-              </a>
-            </li>
+            <li>{navLink('/privacy', 'Privacy Policy')}</li>
+            <li>{navLink('/terms', 'Terms of Service')}</li>
             <li className="py-1.5 text-slate-600">privacy@staywise.app</li>
           </ul>
         </div>

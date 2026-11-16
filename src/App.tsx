@@ -1,19 +1,15 @@
 import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { apiFetch, setActiveOrganizationId, setApiContext } from './lib/api';
 import { configureNeonAuthUrl, neonSignOut } from './lib/neonAuth';
+import { DEFAULT_PLAN_TIER, parsePlanTier } from './lib/plans';
 import { AppShell, type AppRoute } from './components/AppShell';
 import { CookieBanner } from './components/CookieBanner';
+import { Seo } from './seo/Seo';
+import { KNOWN_APP_SUBROUTES, renderFallbackNotFound, renderPublicPage } from './routes';
 import type { OrgMember, Organization, SessionContext, UserRole } from './lib/types';
 
-// Route-based Code Splitting via React.lazy()
-const LandingPage = lazy(() => import('./pages/LandingPage').then((m) => ({ default: m.LandingPage })));
-const FeaturesPage = lazy(() => import('./pages/PublicPages').then((m) => ({ default: m.FeaturesPage })));
-const PricingPage = lazy(() => import('./pages/PublicPages').then((m) => ({ default: m.PricingPage })));
-const SecurityPage = lazy(() => import('./pages/PublicPages').then((m) => ({ default: m.SecurityPage })));
+// Lazy-loaded Workspace, Guest Portal, Print PDF & Auth chunks (Public marketing pages render synchronously for clean SSR hydration)
 const AuthPage = lazy(() => import('./pages/AuthPage').then((m) => ({ default: m.AuthPage })));
-const PrivacyPolicyPage = lazy(() => import('./pages/LegalPages').then((m) => ({ default: m.PrivacyPolicyPage })));
-const TermsPage = lazy(() => import('./pages/LegalPages').then((m) => ({ default: m.TermsPage })));
-const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })));
 const GuestPortalPage = lazy(() => import('./pages/GuestPortalPage').then((m) => ({ default: m.GuestPortalPage })));
 const PrintableGuidePage = lazy(() => import('./pages/PrintableGuidePage').then((m) => ({ default: m.PrintableGuidePage })));
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })));
@@ -44,22 +40,6 @@ function defaultRouteForRole(role: UserRole): AppRoute {
   }
 }
 
-const KNOWN_APP_SUBROUTES: Record<string, AppRoute> = {
-  '/app': 'dashboard',
-  '/app/dashboard': 'dashboard',
-  '/app/properties': 'properties',
-  '/app/guidebooks': 'guidebooks',
-  '/app/reservations': 'reservations',
-  '/app/cleaning': 'cleaning',
-  '/app/incidents': 'incidents',
-  '/app/inspections': 'inspections',
-  '/app/ai-console': 'ai-console',
-  '/app/team': 'team',
-  '/app/automations': 'automations',
-  '/app/feedback': 'feedback',
-  '/app/audit-logs': 'settings',
-};
-
 function PageLoader() {
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center text-xs text-slate-500">
@@ -73,7 +53,7 @@ export default function App() {
   const [authMode, setAuthMode] = useState<'register' | 'login' | 'forgot' | 'reset'>('login');
   const [authPlan, setAuthPlan] = useState<string>(() => {
     const p = new URLSearchParams(window.location.search).get('plan');
-    return p === 'Starter' || p === 'Professional' || p === 'Portfolio' ? p : 'Starter';
+    return parsePlanTier(p) || DEFAULT_PLAN_TIER;
   });
 
   const [session, setSession] = useState<SessionContext>({
@@ -119,49 +99,10 @@ export default function App() {
 
   const openAuth = (mode: 'register' | 'login' | 'forgot' | 'reset', plan?: string) => {
     setAuthMode(mode);
-    const chosen = plan && ['Starter', 'Professional', 'Portfolio'].includes(plan) ? plan : 'Starter';
+    const chosen = parsePlanTier(plan) || DEFAULT_PLAN_TIER;
     setAuthPlan(chosen);
     navigatePath(mode === 'register' ? `/auth?plan=${encodeURIComponent(chosen)}` : '/auth');
   };
-
-  useEffect(() => {
-    const TITLES: Record<string, [string, string]> = {
-      '/': [
-        'Staywise — Guest Welcome Books & Property Operations',
-        'Mobile guest welcome books, AES-256 stay-gated door codes, and photo-verified cleaning checklists for short-term rental hosts.',
-      ],
-      '/features': [
-        'Features — Mobile Welcome Books, Lock Vault & Turnover Ops | Staywise',
-        'Explore Staywise digital guidebooks, rate-limited door and Wi-Fi access, grounded guest assistance, and photo-verified checklists.',
-      ],
-      '/pricing': [
-        'Pricing — Free During Early Access | Staywise',
-        'Starter, Professional, and Portfolio tiers are $0/month during Staywise Early Access with no card required.',
-      ],
-      '/security': [
-        'Security & Encryption — Staywise Hospitality Ops',
-        'AES-256-GCM credential encryption, PostgreSQL brute-force protection, EdDSA/JWKS auth, and instant JSON export or account erasure.',
-      ],
-      '/privacy': [
-        'Privacy Policy | Staywise',
-        'Staywise Software LLC privacy notice covering access secret encryption, subprocessors, retention, and GDPR/CCPA rights.',
-      ],
-      '/terms': [
-        'Terms of Service | Staywise',
-        'Commercial terms and Early Access billing details for Staywise Software LLC.',
-      ],
-      '/auth': [
-        'Sign In or Create Workspace | Staywise',
-        'Sign in or create your Staywise hospitality operations workspace.',
-      ],
-    };
-    const match = TITLES[pathname];
-    if (match) {
-      document.title = match[0];
-      const meta = document.querySelector('meta[name="description"]');
-      if (meta) meta.setAttribute('content', match[1]);
-    }
-  }, [pathname]);
 
   const hydrateFromBackend = async () => {
     setAuthReady(false);
@@ -248,108 +189,49 @@ export default function App() {
     );
   }
 
-  // Legal & Public SEO Pages
-  if (pathname === '/privacy') {
-    return (
-      <Suspense fallback={<PageLoader />}>
-        <PrivacyPolicyPage
-          onNavigate={navigatePath}
-          onEnterWorkspace={() => navigatePath('/app')}
-          onOpenAuth={openAuth}
-        />
-        <CookieBanner onNavigate={navigatePath} />
-      </Suspense>
-    );
-  }
+  // Public Marketing & Legal Pages (synchronous for clean SSR hydration + Seo meta sync)
+  const publicView = renderPublicPage({
+    pathname,
+    onNavigatePath: navigatePath,
+    onEnterWorkspace: () => navigatePath('/app'),
+    onOpenAuth: openAuth,
+  });
 
-  if (pathname === '/terms') {
+  if (publicView) {
     return (
-      <Suspense fallback={<PageLoader />}>
-        <TermsPage
-          onNavigate={navigatePath}
-          onEnterWorkspace={() => navigatePath('/app')}
-          onOpenAuth={openAuth}
-        />
+      <>
+        <Seo path={pathname} />
+        {publicView}
         <CookieBanner onNavigate={navigatePath} />
-      </Suspense>
-    );
-  }
-
-  if (pathname === '/features') {
-    return (
-      <Suspense fallback={<PageLoader />}>
-        <FeaturesPage
-          onNavigatePath={navigatePath}
-          onEnterWorkspace={() => navigatePath('/app')}
-          onOpenAuth={openAuth}
-        />
-        <CookieBanner onNavigate={navigatePath} />
-      </Suspense>
-    );
-  }
-
-  if (pathname === '/pricing') {
-    return (
-      <Suspense fallback={<PageLoader />}>
-        <PricingPage
-          onNavigatePath={navigatePath}
-          onEnterWorkspace={() => navigatePath('/app')}
-          onOpenAuth={openAuth}
-        />
-        <CookieBanner onNavigate={navigatePath} />
-      </Suspense>
-    );
-  }
-
-  if (pathname === '/security') {
-    return (
-      <Suspense fallback={<PageLoader />}>
-        <SecurityPage
-          onNavigatePath={navigatePath}
-          onEnterWorkspace={() => navigatePath('/app')}
-          onOpenAuth={openAuth}
-        />
-        <CookieBanner onNavigate={navigatePath} />
-      </Suspense>
-    );
-  }
-
-  // Landing Page
-  if (pathname === '/') {
-    return (
-      <Suspense fallback={<PageLoader />}>
-        <LandingPage
-          onEnterWorkspace={() => navigatePath('/app')}
-          onOpenAuth={openAuth}
-          onNavigatePath={navigatePath}
-        />
-        <CookieBanner onNavigate={navigatePath} />
-      </Suspense>
+      </>
     );
   }
 
   // Authentication & Onboarding Page (Strict Neon Auth)
   if (pathname === '/auth') {
     return (
-      <Suspense fallback={<PageLoader />}>
-        <AuthPage
-          initialMode={authMode}
-          defaultPlan={authPlan}
-          onboardingUser={onboardingUser}
-          onBack={() => navigatePath('/')}
-          onNavigate={navigatePath}
-          onSignedOut={() => setOnboardingUser(null)}
-          onSuccess={async (newSession) => {
-            setOnboardingUser(null);
-            setSession(newSession);
-            setApiContext(newSession);
-            await hydrateFromBackend();
-            setActiveRoute(defaultRouteForRole(newSession.actorRole));
-            navigatePath('/app');
-          }}
-        />
-        <CookieBanner onNavigate={navigatePath} />
-      </Suspense>
+      <>
+        <Seo path="/auth" />
+        <Suspense fallback={<PageLoader />}>
+          <AuthPage
+            initialMode={authMode}
+            defaultPlan={authPlan}
+            onboardingUser={onboardingUser}
+            onBack={() => navigatePath('/')}
+            onNavigate={navigatePath}
+            onSignedOut={() => setOnboardingUser(null)}
+            onSuccess={async (newSession) => {
+              setOnboardingUser(null);
+              setSession(newSession);
+              setApiContext(newSession);
+              await hydrateFromBackend();
+              setActiveRoute(defaultRouteForRole(newSession.actorRole));
+              navigatePath('/app');
+            }}
+          />
+          <CookieBanner onNavigate={navigatePath} />
+        </Suspense>
+      </>
     );
   }
 
@@ -357,9 +239,10 @@ export default function App() {
   if (pathname.startsWith('/app')) {
     if (!KNOWN_APP_SUBROUTES[pathname]) {
       return (
-        <Suspense fallback={<PageLoader />}>
-          <NotFoundPage onNavigate={navigatePath} />
-        </Suspense>
+        <>
+          <Seo path="/404" />
+          {renderFallbackNotFound(navigatePath)}
+        </>
       );
     }
 
@@ -459,9 +342,10 @@ export default function App() {
 
   // Fallback Custom 404 Page
   return (
-    <Suspense fallback={<PageLoader />}>
-      <NotFoundPage onNavigate={navigatePath} />
+    <>
+      <Seo path="/404" />
+      {renderFallbackNotFound(navigatePath)}
       <CookieBanner onNavigate={navigatePath} />
-    </Suspense>
+    </>
   );
 }

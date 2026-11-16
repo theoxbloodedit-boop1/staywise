@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { db } from '../db.js';
 import { ah, getActor, logAudit, nowIso, requireAuth, resolveNeonJwt, uid } from '../domain.js';
 import { createRateLimiter, getNeonAuthBaseUrl } from '../security.js';
+import { DEFAULT_PLAN_TIER, getPlanSpec, parsePlanTier } from '../../src/lib/plans.js';
 
 export const authRouter = Router();
 
@@ -10,12 +11,6 @@ const authLimiter = createRateLimiter({
   max: 30,
   prefix: 'auth',
 });
-
-const PLAN_META: Record<string, { limit: number; cents: number; aiQuota: number }> = {
-  Starter: { limit: 2, cents: 1900, aiQuota: 100 },
-  Professional: { limit: 10, cents: 4900, aiQuota: 500 },
-  Portfolio: { limit: 25, cents: 9900, aiQuota: 2000 },
-};
 
 authRouter.get(
   '/context',
@@ -154,7 +149,7 @@ authRouter.post(
       return res.status(401).json({ error: 'Valid Neon Auth session required before creating a workspace.' });
     }
 
-    const { orgName, ownerName, country = 'US', planTier = 'Starter', contactPhone, termsAccepted, privacyAccepted } =
+    const { orgName, ownerName, country = 'US', planTier = DEFAULT_PLAN_TIER, contactPhone, termsAccepted, privacyAccepted } =
       req.body || {};
 
     if (!orgName || !String(orgName).trim()) {
@@ -164,8 +159,15 @@ authRouter.post(
       return res.status(400).json({ error: 'You must accept the Terms of Service and Privacy Policy.' });
     }
 
-    const chosenPlan = PLAN_META[planTier] ? planTier : 'Starter';
-    const { limit, cents, aiQuota } = PLAN_META[chosenPlan];
+    const chosenPlan = parsePlanTier(planTier);
+    if (!chosenPlan) {
+      return res.status(400).json({
+        error: 'Invalid plan tier. Choose Starter, Professional, or Portfolio.',
+      });
+    }
+    const spec = getPlanSpec(chosenPlan);
+    const limit = spec.propertyLimit;
+    const aiQuota = spec.aiMonthlyAllowance;
     const displayName = String(ownerName || neonUser.name || neonUser.email.split('@')[0]).trim();
 
     const orgId = uid('org');
@@ -265,7 +267,7 @@ authRouter.post(
           chosenPlan,
           currency,
           invoiceNum,
-          new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) + ' Early Access',
+          new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) + ' Free Full Access',
           now,
         ]
       );

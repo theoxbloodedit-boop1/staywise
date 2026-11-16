@@ -323,7 +323,7 @@ export function GuestPortalPage({ slug }: { slug: string }) {
               <img
                 src={coverSrc}
                 alt={`${guidebook?.brand_name || property.name} welcome book cover photo`}
-                fetchPriority="high"
+                {...({ fetchpriority: 'high' } as any)}
                 width={640}
                 height={427}
                 className="w-full h-full object-cover opacity-85"
@@ -333,7 +333,7 @@ export function GuestPortalPage({ slug }: { slug: string }) {
             <img
               src={coverSrc}
               alt={`${guidebook?.brand_name || property.name} welcome book cover photo`}
-              fetchPriority="high"
+              {...({ fetchpriority: 'high' } as any)}
               className="w-full h-full object-cover opacity-85"
             />
           )}

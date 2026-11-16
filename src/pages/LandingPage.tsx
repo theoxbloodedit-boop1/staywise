@@ -25,6 +25,8 @@ import {
 } from 'lucide-react';
 import { Button, Badge, Card } from '../components/ui';
 import { PublicHeader, PublicFooter } from '../components/PublicChrome';
+import { PLAN_LIST } from '../lib/plans';
+import { HOME_FAQS } from '../seo/Seo';
 
 type ShowcaseRegion = 'US' | 'EU' | 'GB' | 'APAC';
 
@@ -115,29 +117,6 @@ const REGION_SPECS: Record<
   },
 };
 
-const FAQS = [
-  {
-    q: 'Do guests have to download an app or create a login?',
-    a: 'No. Every welcome book opens in Safari or Chrome from a booking link or nightstand QR card. Basic property details show immediately, while smart-lock PINs and Wi-Fi credentials unlock once a guest verifies their stay code.',
-  },
-  {
-    q: 'How are door codes and Wi-Fi passwords protected?',
-    a: 'Access secrets are encrypted at rest with AES-256-GCM before storage and masked on public views until a guest presents an active booking code inside the check-in window (48 hours pre-arrival through 24 hours post-departure). Verification endpoints enforce PostgreSQL-backed rate limiting after repeated invalid guesses.',
-  },
-  {
-    q: 'What happens if a guest asks the assistant something not in our guide?',
-    a: 'The Guest Assistant only retrieves facts from sections you approved. If a guest asks about an undocumented item or requests a special exception (like a 9 AM early check-in), it clearly escalates the request to your host team instead of inventing an answer.',
-  },
-  {
-    q: 'Does Staywise charge my card during Early Access?',
-    a: 'No. Billing checkout is not active yet during Alpha—every tier (Starter, Professional, Portfolio) activates at $0/month without requiring a credit card so you can test multi-property quotas, QR exports, and team workflows freely.',
-  },
-  {
-    q: 'Can we export or delete our organization and account data?',
-    a: 'Yes. Inside Billing & Settings, you can export a complete machine-readable JSON archive of your organization, delete an organization, or permanently delete your personal account and Neon Auth login at any time.',
-  },
-];
-
 export function LandingPage({
   onEnterWorkspace,
   onOpenAuth,
@@ -150,7 +129,6 @@ export function LandingPage({
   const [region, setRegion] = useState<ShowcaseRegion>('US');
   const [selectedSlug, setSelectedSlug] = useState(SAMPLE_PORTALS[0].slug);
   const [stayCode, setStayCode] = useState(SAMPLE_PORTALS[0].code);
-  const [annualBilling, setAnnualBilling] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   const selectedProperty = SAMPLE_PORTALS.find((p) => p.slug === selectedSlug) || SAMPLE_PORTALS[0];
@@ -198,7 +176,7 @@ export function LandingPage({
                 alt="Sunlit architectural vacation rental home managed with Staywise"
                 width={1280}
                 height={853}
-                fetchPriority="high"
+                {...({ fetchpriority: 'high' } as any)}
                 className="absolute inset-0 w-full h-full object-cover object-center"
               />
             </picture>
@@ -208,7 +186,7 @@ export function LandingPage({
               <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md border border-white/25 text-xs font-medium text-white">
                   <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                  Early Access · Live welcome books & turnover ops
+                  100% Free Full Access · No card required
                 </div>
 
                 <a
@@ -730,113 +708,45 @@ export function LandingPage({
           </div>
         </section>
 
-        {/* Pricing (Transparent Early Access) */}
+        {/* Pricing (100% Free Full Access) */}
         <section id="pricing" className="py-14 sm:py-16 bg-slate-50/60 border-t border-slate-200/80">
           <div className="max-w-7xl mx-auto px-4 sm:px-6">
-            <div className="text-center max-w-2xl mx-auto mb-8">
-              <Badge variant="brand">Early Access (Alpha)</Badge>
+            <div className="text-center max-w-2xl mx-auto mb-10">
+              <Badge variant="brand">100% Free Full Access</Badge>
               <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 mt-3">
-                Free during Early Access — clear limits when billing launches
+                Every feature unlocked — completely free during Early Access
               </h2>
               <p className="text-sm text-slate-600 mt-2">
-                No credit card required and no automated charges during Alpha. Choose a tier below to set your workspace property and AI query allowance right away.
+                No credit card required, no paywalled modules, and zero hidden charges. Pick the property capacity tier that fits your portfolio today.
               </p>
-
-              <div className="inline-flex items-center gap-2 mt-5 p-1 rounded-xl bg-white border border-slate-200">
-                <button
-                  type="button"
-                  onClick={() => setAnnualBilling(false)}
-                  className={`px-3.5 py-2 rounded-lg text-xs font-semibold transition-colors ${
-                    !annualBilling ? 'bg-slate-900 text-white' : 'text-slate-700 hover:text-slate-950'
-                  }`}
-                >
-                  Monthly (Planned)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAnnualBilling(true)}
-                  className={`px-3.5 py-2 rounded-lg text-xs font-semibold transition-colors ${
-                    annualBilling ? 'bg-slate-900 text-white' : 'text-slate-700 hover:text-slate-950'
-                  }`}
-                >
-                  Annual (-20% Planned)
-                </button>
-              </div>
             </div>
 
             <div className="grid md:grid-cols-3 gap-6">
-              {[
-                {
-                  tier: 'Starter',
-                  monthly: 19,
-                  annual: 15,
-                  cap: 'Up to 2 properties · 100 AI answers/mo',
-                  desc: 'Great for independent hosts replacing static PDFs.',
-                  features: [
-                    'Mobile digital welcome books',
-                    'QR code & printable PDF export',
-                    'Rate-limited stay-code lock vault',
-                    'Guest support tickets & ratings',
-                    'Custom local currency, °F/°C & emergency info',
-                  ],
-                  highlight: false,
-                },
-                {
-                  tier: 'Professional',
-                  monthly: 49,
-                  annual: 39,
-                  cap: 'Up to 10 properties · 500 AI answers/mo',
-                  desc: 'Built for growing teams running weekly turnovers.',
-                  features: [
-                    'Everything in Starter',
-                    'Grounded AI guest assistant + escalation',
-                    'Cleaning & room-by-room photo checklists',
-                    'Maintenance work orders & verification',
-                    'Multi-role team access & live ops board',
-                  ],
-                  highlight: true,
-                },
-                {
-                  tier: 'Portfolio',
-                  monthly: 99,
-                  annual: 79,
-                  cap: 'Up to 25 properties · 2,000 AI answers/mo',
-                  desc: 'For operators standardizing turnovers across multiple properties.',
-                  features: [
-                    'Everything in Professional',
-                    'Pre-arrival & post-stay asset inspections',
-                    'Guidebook template cloning across units',
-                    'Custom automation alerts & audit logs',
-                    'Full organization JSON export & erasure',
-                  ],
-                  highlight: false,
-                },
-              ].map((plan) => {
-                const plannedRate = annualBilling ? plan.annual : plan.monthly;
+              {PLAN_LIST.map((plan) => {
+                const highlight = plan.tier === 'Professional';
                 return (
                   <Card
                     key={plan.tier}
                     className={`p-6 rounded-2xl flex flex-col justify-between ${
-                      plan.highlight ? 'border-slate-900 ring-1 ring-slate-900 shadow-md' : ''
+                      highlight ? 'border-slate-900 ring-1 ring-slate-900 shadow-md' : ''
                     }`}
                   >
                     <div>
                       <div className="flex items-center justify-between">
-                        <h3 className="text-base font-bold text-slate-900">{plan.tier}</h3>
-                        {plan.highlight && <Badge variant="brand">Most Popular</Badge>}
+                        <h3 className="text-base font-bold text-slate-900">{plan.label}</h3>
+                        {plan.badge && <Badge variant="brand">{plan.badge}</Badge>}
                       </div>
                       <div className="mt-3 flex items-baseline gap-2">
                         <span className="text-3xl font-bold tabular-nums text-slate-900">$0</span>
-                        <span className="text-xs font-medium text-teal-800">during Alpha</span>
-                        <span className="text-xs text-slate-500 line-through tabular-nums ml-auto">
-                          ${plannedRate}/mo
-                        </span>
+                        <span className="text-xs font-medium text-teal-800">/ month · All features unlocked</span>
                       </div>
-                      <div className="text-xs font-medium text-slate-700 mt-1">{plan.cap}</div>
-                      <p className="text-[13px] text-slate-600 mt-3">{plan.desc}</p>
+                      <div className="text-xs font-medium text-slate-700 mt-1">
+                        Up to {plan.propertyLimit} properties · {plan.aiMonthlyAllowance.toLocaleString()} AI answers/mo
+                      </div>
+                      <p className="text-[13px] text-slate-600 mt-3">{plan.summary}</p>
 
                       <ul className="mt-5 space-y-2.5 text-[13px] text-slate-700 border-t border-slate-100 pt-4">
-                        {plan.features.map((f) => (
+                        {plan.highlights.map((f) => (
                           <li key={f} className="flex items-start gap-2">
                             <Check className="w-4 h-4 text-teal-800 shrink-0 mt-0.5" />
                             <span>{f}</span>
@@ -848,10 +758,10 @@ export function LandingPage({
                     <Button
                       size="lg"
                       className="w-full mt-6 min-h-[44px]"
-                      variant={plan.highlight ? 'primary' : 'outline'}
+                      variant={highlight ? 'primary' : 'outline'}
                       onClick={() => onOpenAuth('register', plan.tier)}
                     >
-                      Start {plan.tier} Free in Alpha
+                      Start {plan.label} Free
                     </Button>
                   </Card>
                 );
@@ -864,7 +774,7 @@ export function LandingPage({
                 Frequently asked questions
               </h2>
               <div className="space-y-2.5">
-                {FAQS.map((item, idx) => {
+                {HOME_FAQS.map((item, idx) => {
                   const open = openFaq === idx;
                   return (
                     <div key={item.q} className="bg-white rounded-xl border border-slate-200 overflow-hidden">

@@ -83,23 +83,34 @@ const uploadLimiter = createRateLimiter({
   prefix: 'uploads',
 });
 
-// Dynamic host-aware SEO files
+// Dynamic host-aware SEO fallback files (CDN also serves dist/robots.txt & dist/sitemap.xml)
 app.get('/robots.txt', (req, res) => {
   const origin = `${req.protocol}://${req.get('host')}`;
   res
     .type('text/plain')
     .send(
-      `User-agent: *\nAllow: /\nAllow: /features\nAllow: /pricing\nAllow: /security\nAllow: /privacy\nAllow: /terms\nDisallow: /app/\nDisallow: /auth\nDisallow: /guest/\nDisallow: /print/\nDisallow: /api/\nDisallow: /uploads/\n\nSitemap: ${origin}/sitemap.xml\n`
+      `User-agent: *\nAllow: /\nAllow: /features\nAllow: /guest-guidebook\nAllow: /turnover-management\nAllow: /templates\nAllow: /pricing\nAllow: /security\nAllow: /privacy\nAllow: /terms\nDisallow: /app/\nDisallow: /auth\nDisallow: /guest/\nDisallow: /print/\nDisallow: /api/\nDisallow: /uploads/\n\nSitemap: ${origin}/sitemap.xml\n`
     );
 });
 
 app.get('/sitemap.xml', (req, res) => {
   const origin = `${req.protocol}://${req.get('host')}`;
+  const urls = [
+    ['/', 'weekly', '1.0'],
+    ['/features', 'weekly', '0.9'],
+    ['/guest-guidebook', 'weekly', '0.9'],
+    ['/turnover-management', 'weekly', '0.9'],
+    ['/templates', 'weekly', '0.9'],
+    ['/pricing', 'weekly', '0.9'],
+    ['/security', 'monthly', '0.8'],
+    ['/privacy', 'monthly', '0.5'],
+    ['/terms', 'monthly', '0.5'],
+  ]
+    .map(([p, freq, prio]) => `  <url><loc>${origin}${p}</loc><changefreq>${freq}</changefreq><priority>${prio}</priority></url>`)
+    .join('\n');
   res
     .type('application/xml')
-    .send(
-      `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>${origin}/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>\n  <url><loc>${origin}/features</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>\n  <url><loc>${origin}/pricing</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>\n  <url><loc>${origin}/security</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>\n  <url><loc>${origin}/privacy</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>\n  <url><loc>${origin}/terms</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>\n</urlset>\n`
-    );
+    .send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`);
 });
 
 // Minimal public health probe (never exposes internal config flags)
@@ -210,6 +221,9 @@ export function isKnownSpaRoute(urlPath: string): boolean {
   if (
     clean === '/' ||
     clean === '/features' ||
+    clean === '/guest-guidebook' ||
+    clean === '/turnover-management' ||
+    clean === '/templates' ||
     clean === '/pricing' ||
     clean === '/security' ||
     clean === '/auth' ||

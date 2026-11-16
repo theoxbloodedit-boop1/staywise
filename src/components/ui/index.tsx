@@ -1,9 +1,8 @@
 import React from 'react';
 import { X } from 'lucide-react';
-
-export function cn(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(' ');
-}
+import { cn } from '../../lib/cn';
+export { cn } from '../../lib/cn';
+export { Button, type ButtonProps, type ButtonSize, type ButtonVariant } from './Button';
 
 export function Card({
   children,
@@ -89,44 +88,6 @@ export function statusToBadgeVariant(status: string): BadgeVariant {
     default:
       return 'neutral';
   }
-}
-
-export function Button({
-  children,
-  variant = 'primary',
-  size = 'md',
-  className,
-  ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'inverted';
-  size?: 'sm' | 'md' | 'lg';
-}) {
-  const variants = {
-    primary: 'bg-slate-900 text-white hover:bg-slate-800 border border-slate-900 shadow-xs',
-    secondary: 'bg-teal-700 text-white hover:bg-teal-800 border border-teal-700',
-    outline: 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200',
-    ghost: 'bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent',
-    danger: 'bg-red-600 text-white hover:bg-red-700 border border-red-600',
-    inverted: 'bg-white text-slate-900 hover:bg-slate-100 border border-white shadow-xs',
-  };
-  const sizes = {
-    sm: 'h-8 px-2.5 text-xs',
-    md: 'h-9 px-3.5 text-[13px]',
-    lg: 'h-10 px-4 text-sm',
-  };
-  return (
-    <button
-      className={cn(
-        'inline-flex items-center justify-center gap-1.5 font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-slate-900/15 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap',
-        variants[variant],
-        sizes[size],
-        className
-      )}
-      {...props}
-    >
-      {children}
-    </button>
-  );
 }
 
 export function Input({

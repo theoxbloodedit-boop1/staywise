@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { apiFetch, downloadWithAuth } from '../lib/api';
 import { formatDateTimeShort, formatMoney, REGION_PRESETS } from '../lib/format';
+import { PLAN_LIST } from '../lib/plans';
 import { Badge, Button, Card, Input, Modal, PageHeader, Select } from '../components/ui';
 import type { Organization, RegionCode } from '../lib/types';
 
@@ -300,26 +301,22 @@ export function SettingsBillingAuditPage({
         <Card className="lg:col-span-7 p-5 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <h2 className="text-sm font-semibold text-slate-900">Early Access Plan & Monthly Quotas</h2>
+              <h2 className="text-sm font-semibold text-slate-900">Free Full Access Plan & Capacity</h2>
               <p className="text-xs text-slate-500">
-                Active Plan: <strong className="text-slate-900">{org?.plan_tier}</strong> (Early Access · $0/mo during Alpha) ·{' '}
+                Active Plan: <strong className="text-slate-900">{org?.plan_tier}</strong> (100% Free Full Access · $0/mo) ·{' '}
                 <span className="tabular-nums">
                   {billingInfo?.activePropertiesCount ?? '—'} / {org?.property_limit} active units
                 </span>{' '}
                 ·{' '}
                 <span className="tabular-nums">
-                  {billingInfo?.aiUsedThisMonth ?? 0} / {billingInfo?.aiMonthlyAllowance ?? 500} AI queries this month
+                  {billingInfo?.aiUsedThisMonth ?? 0} / {billingInfo?.aiMonthlyAllowance ?? 250} AI replies this month
                 </span>
               </p>
             </div>
           </div>
 
           <div className="grid sm:grid-cols-3 gap-3">
-            {[
-              { tier: 'Starter', price: '$0 in Alpha', future: 'Planned $19/mo', cap: 'Up to 2 units · 100 AI/mo' },
-              { tier: 'Professional', price: '$0 in Alpha', future: 'Planned $49/mo', cap: 'Up to 10 units · 500 AI/mo' },
-              { tier: 'Portfolio', price: '$0 in Alpha', future: 'Planned $99/mo', cap: 'Up to 25 units · 2,000 AI/mo' },
-            ].map((p) => {
+            {PLAN_LIST.map((p) => {
               const active = org?.plan_tier === p.tier;
               return (
                 <div
@@ -330,12 +327,14 @@ export function SettingsBillingAuditPage({
                 >
                   <div>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-slate-900">{p.tier}</span>
+                      <span className="text-xs font-semibold text-slate-900">{p.label}</span>
                       {active && <Badge variant="brand">Current</Badge>}
                     </div>
-                    <div className="text-base font-bold tabular-nums text-slate-900 mt-1">{p.price}</div>
-                    <div className="text-[11px] text-slate-500">{p.future} after GA</div>
-                    <div className="text-[11px] text-slate-600 mt-1">{p.cap}</div>
+                    <div className="text-base font-bold tabular-nums text-slate-900 mt-1">$0 / mo</div>
+                    <div className="text-[11px] font-medium text-teal-800">All features unlocked</div>
+                    <div className="text-[11px] text-slate-600 mt-1">
+                      Up to {p.propertyLimit} units · {p.aiMonthlyAllowance.toLocaleString()} AI/mo
+                    </div>
                   </div>
                   <Button
                     size="sm"
@@ -344,7 +343,7 @@ export function SettingsBillingAuditPage({
                     disabled={active}
                     onClick={() => handlePlanChange(p.tier)}
                   >
-                    {active ? 'Active Plan' : `Switch to ${p.tier}`}
+                    {active ? 'Active Plan' : `Switch to ${p.label}`}
                   </Button>
                 </div>
               );

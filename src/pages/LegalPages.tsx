@@ -135,9 +135,9 @@ export function TermsPage({
             </section>
 
             <section className="space-y-2 text-sm leading-relaxed">
-              <h2 className="text-base font-semibold text-slate-900">2. Early Access Tiers, Billing & Cancellation</h2>
+              <h2 className="text-base font-semibold text-slate-900">2. Free Early Access Tiers, Billing & Cancellation</h2>
               <p className="text-slate-700">
-                During Early Access (Alpha), Starter (up to 2 active properties), Professional (up to 10 properties), and Portfolio (up to 25 properties) tiers operate at $0/month without requiring a payment card. Paid billing will only activate with explicit prior notice and opt-in checkout. When commercial billing launches, subscriptions may be cancelled at any time before renewal, with prorated refunds available within 14 days of any initial paid charge by writing to billing@staywise.app.
+                Staywise is currently 100% free during Early Access with full feature access unlocked across Starter (up to 5 active properties), Professional (up to 15 properties), and Portfolio (up to 50 properties) at $0/month with no credit card required. Commercial billing will only be introduced with advance written notice and explicit opt-in checkout. Should paid subscriptions apply in the future, accounts may cancel anytime before renewal with prorated 14-day refunds on initial paid charges via billing@staywise.app.
               </p>
             </section>
 

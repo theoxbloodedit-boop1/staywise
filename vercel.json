@@ -12,8 +12,6 @@
   },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index" },
-    { "source": "/robots.txt", "destination": "/api/index" },
-    { "source": "/sitemap.xml", "destination": "/api/index" },
     { "source": "/app", "destination": "/api/index" },
     { "source": "/app/(.*)", "destination": "/api/index" },
     { "source": "/guest/(.*)", "destination": "/api/index" },

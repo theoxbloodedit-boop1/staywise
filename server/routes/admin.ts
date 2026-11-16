@@ -17,15 +17,11 @@ import {
   uid,
 } from '../domain.js';
 import { getNeonDatabaseOverview } from '../backup.js';
+import { getPlanSpec, parsePlanTier } from '../../src/lib/plans.js';
+import { percentRatio, ratio } from '../../src/lib/metrics.js';
 
 export const adminRouter = Router();
 adminRouter.use(requireAuth);
-
-const PLAN_CATALOG: Record<string, { limit: number; cents: number; aiQuota: number }> = {
-  Starter: { limit: 2, cents: 1900, aiQuota: 100 },
-  Professional: { limit: 10, cents: 4900, aiQuota: 500 },
-  Portfolio: { limit: 25, cents: 9900, aiQuota: 2000 },
-};
 
 function formatRangeLabel(startYmd: string, endYmd: string): string {
   const fmt = (ymd: string) => {
@@ -126,16 +122,15 @@ adminRouter.get(
     const unresolvedGuestRequests = supportAll.filter((s) => s.status !== 'Resolved').length;
 
     const completedCleanings = cleaningRange.filter((c) => c.status === 'Completed').length;
-    const cleaningCompletionRate =
-      cleaningRange.length > 0 ? Math.round((completedCleanings / cleaningRange.length) * 100) : null;
-    const readinessRate =
-      propertyList.length > 0 ? Math.round((readyProperties / propertyList.length) * 100) : null;
+    const cleaningCompletionRate = percentRatio(completedCleanings, cleaningRange.length);
+    const readinessRate = percentRatio(readyProperties, propertyList.length);
 
     const resolved = incidentsRange.filter((i) => i.resolved_at && i.created_at);
     let avgResolutionHours: number | null = null;
     if (resolved.length > 0) {
       const totalMs = resolved.reduce((acc, i) => acc + Math.max(0, Date.parse(i.resolved_at) - Date.parse(i.created_at)), 0);
-      avgResolutionHours = Math.max(1, Math.round(totalMs / resolved.length / 3600000));
+      const rawHours = ratio(totalMs, resolved.length * 3600000, 0);
+      avgResolutionHours = rawHours !== null ? Math.max(1, rawHours) : null;
     }
 
     const categoryMap: Record<string, number> = {};
@@ -144,17 +139,14 @@ adminRouter.get(
     }
     const categoryBreakdown = Object.entries(categoryMap).map(([category, count]) => ({ category, count }));
 
-    const avgFeedbackScore =
-      feedbackRange.length > 0
-        ? Number(
-            (
-              feedbackRange.reduce(
-                (acc, f) => acc + (f.cleaning_rating + f.checkin_rating + f.comfort_rating + f.maintenance_rating) / 4,
-                0
-              ) / feedbackRange.length
-            ).toFixed(2)
-          )
-        : null;
+    const avgFeedbackScore = ratio(
+      feedbackRange.reduce(
+        (acc, f) => acc + (f.cleaning_rating + f.checkin_rating + f.comfort_rating + f.maintenance_rating) / 4,
+        0
+      ),
+      feedbackRange.length,
+      2
+    );
 
     const knowledgeGapsOpen = aiAll.filter((a) => a.knowledge_gap_flag === 1 && a.gap_resolved === 0).length;
 
@@ -180,10 +172,10 @@ adminRouter.get(
         readinessRate,
         avgResolutionHours,
         guestInquiryVolume: aiRange.length + supportRange.length,
-        aiDeflectionRate:
-          aiRange.length > 0
-            ? Math.round((aiRange.filter((a) => a.escalated === 0).length / aiRange.length) * 100)
-            : null,
+        aiDeflectionRate: percentRatio(
+          aiRange.filter((a) => a.escalated === 0).length,
+          aiRange.length
+        ),
         knowledgeGapsOpen,
         avgFeedbackScore,
         categoryBreakdown,
@@ -612,9 +604,9 @@ adminRouter.post(
   requireRoles('Organization Owner', 'Platform Super Admin'),
   ah(async (req, res) => {
     const actor = getActor(req);
-    const { planTier } = req.body || {};
-    const spec = PLAN_CATALOG[planTier];
-    if (!spec) return res.status(400).json({ error: 'Invalid plan tier.' });
+    const chosenPlan = parsePlanTier(req.body?.planTier);
+    if (!chosenPlan) return res.status(400).json({ error: 'Invalid plan tier. Choose Starter, Professional, or Portfolio.' });
+    const spec = getPlanSpec(chosenPlan);
 
     const org = await db.queryOne<any>('SELECT * FROM organizations WHERE id = $1', [actor.organizationId]);
     if (!org) return res.status(404).json({ error: 'Organization not found.' });
@@ -625,9 +617,9 @@ adminRouter.post(
     );
     const activeCount = countRow?.c ?? 0;
 
-    if (activeCount > spec.limit) {
+    if (activeCount > spec.propertyLimit) {
       return res.status(409).json({
-        error: `Cannot downgrade to ${planTier} (max ${spec.limit} properties): you currently have ${activeCount} active properties. Archive ${activeCount - spec.limit} property(ies) first.`,
+        error: `Cannot switch to ${chosenPlan} (max ${spec.propertyLimit} properties): you currently have ${activeCount} active properties. Archive ${activeCount - spec.propertyLimit} property(ies) first.`,
         code: 'DOWNGRADE_EXCEEDS_ACTIVE_PROPERTIES',
       });
     }
@@ -639,9 +631,9 @@ adminRouter.post(
 
     await db.transaction(async (tx) => {
       await tx.execute('UPDATE organizations SET plan_tier = $1, property_limit = $2, ai_monthly_allowance = $3 WHERE id = $4', [
-        planTier,
-        spec.limit,
-        spec.aiQuota,
+        chosenPlan,
+        spec.propertyLimit,
+        spec.aiMonthlyAllowance,
         actor.organizationId,
       ]);
 
@@ -651,10 +643,10 @@ adminRouter.post(
         [
           uid('pay'),
           actor.organizationId,
-          planTier,
+          chosenPlan,
           currency,
           invoiceNum,
-          new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) + ' Early Access',
+          new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) + ' Free Full Access',
           now,
         ]
       );
@@ -667,7 +659,7 @@ adminRouter.post(
       action: 'BILLING_PLAN_CHANGED',
       entityType: 'Organization',
       entityId: actor.organizationId,
-      details: `Switched subscription plan to ${planTier} (up to ${spec.limit} properties, ${spec.aiQuota} AI queries/mo) · Invoice ${invoiceNum}.`,
+      details: `Switched workspace tier to ${chosenPlan} (up to ${spec.propertyLimit} properties, ${spec.aiMonthlyAllowance} AI queries/mo, $0 Free Access) · Ref ${invoiceNum}.`,
     });
 
     res.json(await db.queryOne('SELECT * FROM organizations WHERE id = $1', [actor.organizationId]));

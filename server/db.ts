@@ -359,6 +359,14 @@ export const SCHEMA_STATEMENTS: string[] = [
     window_start BIGINT NOT NULL,
     locked_until BIGINT NOT NULL DEFAULT 0
   )`,
+  `CREATE INDEX IF NOT EXISTS idx_guest_verify_locked_until ON guest_verify_attempts (locked_until)`,
+  `CREATE TABLE IF NOT EXISTS rate_limit_buckets (
+    bucket_key TEXT PRIMARY KEY,
+    hit_count INTEGER NOT NULL DEFAULT 0,
+    window_start BIGINT NOT NULL,
+    blocked_until BIGINT NOT NULL DEFAULT 0
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_rate_limit_blocked_until ON rate_limit_buckets (blocked_until)`,
   `CREATE INDEX IF NOT EXISTS idx_users_lower_email ON users (LOWER(email))`,
   `CREATE INDEX IF NOT EXISTS idx_users_neon_auth_id ON users (neon_auth_id)`,
   `CREATE INDEX IF NOT EXISTS idx_memberships_user ON organization_memberships (user_id, organization_id)`,
