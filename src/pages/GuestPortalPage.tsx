@@ -74,7 +74,10 @@ export function GuestPortalPage({ slug }: { slug: string }) {
     try {
       const activeCode = codeOverride !== undefined ? codeOverride : accessCode;
       const res = await fetch(`/api/guest/${slug}${activeCode ? `?code=${encodeURIComponent(activeCode)}` : ''}`);
-      if (!res.ok) throw new Error('Property Welcome Book not found.');
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        throw new Error(errBody.error || 'Property Welcome Book not found.');
+      }
       const json = await res.json();
       setData(json);
     } catch (e: any) {
