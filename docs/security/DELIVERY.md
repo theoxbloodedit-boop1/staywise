@@ -1,6 +1,19 @@
 # STAYWISE — Phase 2, first implementation increment
 
 Date: 2026-11-16. Verdict: **NOT READY**.
+
+Dependency follow-up (after this interim report): the four HIGH npm audit alerts
+are resolved with a targeted override of @vercel/cli-config to 0.4.0, which uses
+patched Zod (lockfile resolves 4.6.7). Advisory: GHSA-mrhx-c7xc-m3w5.
+Blob stays 2.9.0; OIDC stays 3.8.10. No forced downgrade or OIDC major upgrade.
+Keep this override until Blob/OIDC natively resolve a patched CLI config; removing
+it requires a fresh audit and compatibility tests. Verified from clean npm ci:
+npm audit reports zero vulnerabilities; 22/22 tests pass, both typechecks and
+build pass. Added transitive-resolution config parse/import compatibility test.
+Real external Blob/OIDC transport remains NOT EXECUTED. The Neon peer-dependency
+warning and Rollup annotation warnings remain, independently of the fixed advisory.
+Earlier counts below describe the prior delivery, not the current audit result.
+
 This is an interim delivery, NOT completion of the fourteen-lot mandate.
 No deployment, remote migration, key replacement, production access, historical deletion
 or automatic historical certification was performed. Work remains on the fixed Arena
