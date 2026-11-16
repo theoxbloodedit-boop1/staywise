@@ -12,6 +12,7 @@ import {
   requireRoles,
 } from '../domain.js';
 import { encryptField } from '../security.js';
+import { sortGuidebookSections } from '../lib/guest-helpers.js';
 
 export const guidebooksRouter = Router();
 guidebooksRouter.use(requireAuth);
@@ -41,9 +42,12 @@ guidebooksRouter.get(
     if (!canAccessProperty(actor, prop.id)) return res.status(403).json({ error: 'Property access denied.' });
 
     const guidebook = await db.queryOne<any>('SELECT * FROM guidebooks WHERE property_id = $1', [prop.id]);
-    const sections = await db.query<any>(
-      'SELECT * FROM guidebook_sections WHERE property_id = $1 ORDER BY sort_order ASC',
-      [prop.id]
+    const sections = sortGuidebookSections(
+      await db.query<any>(
+        'SELECT * FROM guidebook_sections WHERE property_id = $1 ORDER BY sort_order ASC',
+        [prop.id]
+      ),
+      guidebook?.section_order_json
     );
 
     res.json({

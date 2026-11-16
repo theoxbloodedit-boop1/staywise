@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   Search,
+  X,
   Lock,
   Unlock,
   Wifi,
@@ -21,10 +22,20 @@ import {
   CheckCircle2,
   AlertTriangle,
   Star,
+  MapPin,
 } from 'lucide-react';
 import { Badge, Button, Card, Input, Select, TextArea, statusToBadgeVariant } from '../components/ui';
 import { uploadEvidencePhoto } from '../lib/api';
 import type { GuidebookSection } from '../lib/types';
+
+function safeAccentColor(raw?: string | null): string {
+  return raw && /^#[0-9a-fA-F]{6}$/.test(raw) ? raw : '#0F766E';
+}
+
+function phoneHref(raw?: string | null): string {
+  const cleaned = String(raw || '').replace(/[^+\d]/g, '');
+  return cleaned ? `tel:${cleaned}` : '#';
+}
 
 export function GuestPortalPage({ slug }: { slug: string }) {
   const params = new URLSearchParams(window.location.search);
@@ -40,7 +51,11 @@ export function GuestPortalPage({ slug }: { slug: string }) {
 
   const [tab, setTab] = useState<'guide' | 'ai' | 'support' | 'feedback'>('guide');
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeSectionKey, setActiveSectionKey] = useState<string>('');
   const [copiedWifi, setCopiedWifi] = useState(false);
+  const [copiedPin, setCopiedPin] = useState(false);
+  const [actionBusy, setActionBusy] = useState<'ack' | 'depart' | null>(null);
+  const [actionError, setActionError] = useState('');
 
   // AI Assistant state
   const [aiMessages, setAiMessages] = useState<Array<{ role: 'user' | 'ai'; text: string; meta?: any }>>([]);
@@ -80,6 +95,13 @@ export function GuestPortalPage({ slug }: { slug: string }) {
       }
       const json = await res.json();
       setData(json);
+      if (json?.sections?.[0]?.section_key && !activeSectionKey) {
+        setActiveSectionKey(json.sections[0].section_key);
+      }
+      const titleName = json?.guidebook?.brand_name || json?.property?.name;
+      if (titleName) {
+        document.title = `${titleName} — Guest Welcome Book | Staywise`;
+      }
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -103,49 +125,82 @@ export function GuestPortalPage({ slug }: { slug: string }) {
   const handleVerifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setVerifyMsg('');
-    const res = await fetch(`/api/guest/${slug}/verify`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code: codeInput }),
-    });
-    if (!res.ok) {
-      const err = await res.json();
-      setVerifyMsg(err.error || 'Invalid stay access code.');
-      return;
+    try {
+      const res = await fetch(`/api/guest/${slug}/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: codeInput }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setVerifyMsg(err.error || 'Invalid stay access code.');
+        return;
+      }
+      const clean = codeInput.trim();
+      setAccessCode(clean);
+      setIsMaintenance(true);
+      setSupError('');
+      await loadPortal(clean);
+      await loadRequests(clean);
+    } catch {
+      setVerifyMsg('Network error while verifying code. Please retry.');
     }
-    const clean = codeInput.trim();
-    setAccessCode(clean);
-    setIsMaintenance(true);
-    setSupError('');
-    await loadPortal(clean);
-    await loadRequests(clean);
   };
 
   const handleLockSession = async () => {
     setAccessCode('');
     setCodeInput('');
     setVerifyMsg('');
+    setActionError('');
     setIsMaintenance(false);
+    // Strip ?code=... from the address bar so refreshing never re-unlocks secrets
+    if (window.location.search) {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
     await loadPortal('');
     await loadRequests('');
   };
 
   const handleAckRules = async () => {
-    await fetch(`/api/guest/${slug}/acknowledge-rules`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code: accessCode }),
-    });
-    await loadPortal();
+    setActionBusy('ack');
+    setActionError('');
+    try {
+      const res = await fetch(`/api/guest/${slug}/acknowledge-rules`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: accessCode }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Unable to acknowledge rules right now.');
+      }
+      await loadPortal();
+    } catch (err: any) {
+      setActionError(err.message || 'Unable to acknowledge rules right now.');
+    } finally {
+      setActionBusy(null);
+    }
   };
 
   const handleConfirmDeparture = async () => {
-    await fetch(`/api/guest/${slug}/confirm-departure`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code: accessCode }),
-    });
-    await loadPortal();
+    setActionBusy('depart');
+    setActionError('');
+    try {
+      const res = await fetch(`/api/guest/${slug}/confirm-departure`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: accessCode }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Unable to confirm departure right now.');
+      }
+      await loadPortal();
+    } catch (err: any) {
+      setActionError(err.message || 'Unable to confirm departure right now.');
+    } finally {
+      setActionBusy(null);
+    }
   };
 
   const sendAiQuestion = async (qText?: string) => {
@@ -160,8 +215,30 @@ export function GuestPortalPage({ slug }: { slug: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question: text, code: accessCode }),
       });
-      const ans = await res.json();
+      const ans = await res.json().catch(() => ({}));
+      if (!res.ok || !ans.answer) {
+        setAiMessages((prev) => [
+          ...prev,
+          {
+            role: 'ai',
+            text:
+              ans.error ||
+              'Our assistant could not process this request right now. Please try again or use Help & Issues to contact your host.',
+            meta: { escalated: true },
+          },
+        ]);
+        return;
+      }
       setAiMessages((prev) => [...prev, { role: 'ai', text: ans.answer, meta: ans }]);
+    } catch {
+      setAiMessages((prev) => [
+        ...prev,
+        {
+          role: 'ai',
+          text: 'Network error contacting the property assistant. Please retry or open Help & Issues.',
+          meta: { escalated: true },
+        },
+      ]);
     } finally {
       setAiLoading(false);
     }
@@ -181,7 +258,9 @@ export function GuestPortalPage({ slug }: { slug: string }) {
         setSupPhoto(uploadedUrl);
       } catch (err: any) {
         setSupPhoto('');
-        setSupError(err?.message || 'Unable to upload photo. Verify your stay code first or use a smaller image (max 5 MB).');
+        setSupError(
+          err?.message || 'Unable to upload photo. Verify your stay code first or use a smaller image (max 5 MB).'
+        );
       }
     };
     reader.readAsDataURL(file);
@@ -205,7 +284,7 @@ export function GuestPortalPage({ slug }: { slug: string }) {
           attachment_url: supPhoto || null,
         }),
       });
-      const out = await res.json();
+      const out = await res.json().catch(() => ({}));
       if (!res.ok) {
         setSupError(out.error || 'Unable to submit support request. Please check your stay details and try again.');
         return;
@@ -241,7 +320,7 @@ export function GuestPortalPage({ slug }: { slug: string }) {
           follow_up_requested: fbFollowUp,
         }),
       });
-      const out = await res.json();
+      const out = await res.json().catch(() => ({}));
       if (!res.ok) {
         setFbError(out.error || 'Unable to record feedback right now. Please try again.');
         return;
@@ -253,10 +332,23 @@ export function GuestPortalPage({ slug }: { slug: string }) {
   };
 
   if (loading) {
-    return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-sm text-slate-500">Loading Guest Welcome Book...</div>;
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center text-sm text-slate-500">
+        Loading Guest Welcome Book...
+      </div>
+    );
   }
   if (error || !data) {
-    return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-sm text-red-600">{error}</div>;
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 text-center">
+        <Card className="p-6 max-w-sm space-y-3">
+          <div className="text-sm font-semibold text-red-700">{error || 'Welcome Book unavailable.'}</div>
+          <Button size="sm" variant="outline" onClick={() => loadPortal()}>
+            Retry
+          </Button>
+        </Card>
+      </div>
+    );
   }
 
   const { property, guidebook, isVerified, reservation, sections } = data as {
@@ -298,6 +390,30 @@ export function GuestPortalPage({ slug }: { slug: string }) {
     }
   };
 
+  const shortChipLabel = (sec: GuidebookSection) => {
+    switch (sec.section_key) {
+      case 'welcome':
+        return 'Welcome';
+      case 'checkin':
+        return 'Check-In';
+      case 'rules':
+        return 'Rules';
+      case 'wifi_home':
+        return 'Wi-Fi & Home';
+      case 'local_picks':
+        return 'Local Picks';
+      case 'emergency':
+        return 'Emergency';
+      case 'getting_around':
+        return 'Transit';
+      case 'checkout':
+        return 'Check-Out';
+      default:
+        return sec.title.split(' ')[0];
+    }
+  };
+
+  const accentColor = safeAccentColor(guidebook?.accent_color);
   const coverSrc: string = guidebook?.cover_image || property.cover_image || '';
   const localStemMatch = coverSrc.match(/^\/images\/([a-z0-9-]+)\.(jpg|jpeg|png|webp)$/i);
   const localStem = localStemMatch ? localStemMatch[1] : null;
@@ -307,6 +423,18 @@ export function GuestPortalPage({ slug }: { slug: string }) {
       : guidebook?.typography_style === 'Classic Hospitality'
         ? 'font-display tracking-wide'
         : 'font-sans';
+
+  const heroLocation = isVerified
+    ? `${property.address_line}, ${property.city}, ${property.state}`
+    : `${property.city}, ${property.state}`;
+
+  const jumpToSection = (key: string) => {
+    setActiveSectionKey(key);
+    const el = document.getElementById(`sec-${key}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   return (
     <div className={`min-h-screen bg-slate-100 pb-20 ${fontClass}`}>
@@ -344,18 +472,21 @@ export function GuestPortalPage({ slug }: { slug: string }) {
             />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-900/30 to-transparent" />
-          <div className="absolute top-3.5 left-4 right-4 flex items-center justify-between">
+          <div className="absolute top-3.5 left-4 right-4 flex items-center justify-between gap-2">
             <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-white/95 text-slate-900">
               STAYWISE Guest Portal · No App Needed
             </span>
-            <span className="px-2.5 py-1 rounded-full text-[11px] font-mono font-semibold bg-red-600 text-white">
+            <a
+              href={phoneHref(property.emergency_number)}
+              className="px-2.5 py-1 rounded-full text-[11px] font-mono font-semibold bg-red-600 text-white hover:bg-red-700 transition-colors"
+            >
               Emergency: {property.emergency_number}
-            </span>
+            </a>
           </div>
           <div className="absolute bottom-4 left-4 right-4 text-white">
             <h1 className="text-xl font-bold leading-tight">{guidebook?.brand_name || property.name}</h1>
             <p className="text-xs text-slate-200 mt-1">
-              {property.address_line} · {property.bedrooms} bd · {property.bathrooms} ba · Up to {property.max_occupancy} guests
+              {heroLocation} · {property.bedrooms} bd · {property.bathrooms} ba · Up to {property.max_occupancy} guests
             </p>
           </div>
         </div>
@@ -371,7 +502,7 @@ export function GuestPortalPage({ slug }: { slug: string }) {
                     Verified Stay: {reservation.guest_name} ({reservation.access_code})
                   </div>
                   <div className="text-[11px] text-slate-500">
-                    Smart-lock PIN, lockbox details & Wi-Fi password unlocked
+                    Smart-lock PIN, lockbox details &amp; Wi-Fi password unlocked
                   </div>
                 </div>
               </div>
@@ -383,7 +514,7 @@ export function GuestPortalPage({ slug }: { slug: string }) {
             <form onSubmit={handleVerifyCode} className="space-y-2">
               <div className="flex items-center gap-1.5 text-xs font-medium text-amber-900">
                 <Lock className="w-3.5 h-3.5 text-amber-700 shrink-0" />
-                <span>Smart-lock PINs, exact street address & Wi-Fi passwords are protected until booking verification.</span>
+                <span>Smart-lock PINs, exact street address &amp; Wi-Fi passwords are protected until booking verification.</span>
               </div>
               <div className="flex gap-2">
                 <input
@@ -405,202 +536,387 @@ export function GuestPortalPage({ slug }: { slug: string }) {
         <div className="flex-1 p-4 space-y-4">
           {tab === 'guide' && (
             <>
-              <div className="relative">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                <input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search Wi-Fi, parking, thermostat, dining, checkout..."
-                  className="w-full h-9 pl-9 pr-3 text-xs bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:outline-none focus:border-slate-400"
-                />
+              {/* Search + Quick-Jump Mobile Chips */}
+              <div className="space-y-2.5 sticky top-0 z-20 bg-white/95 backdrop-blur pt-1 pb-2 -mx-1 px-1">
+                <div className="relative">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  <input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search Wi-Fi, parking, thermostat, dining, checkout..."
+                    className="w-full h-9 pl-9 pr-8 text-xs bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:outline-none focus:border-slate-400"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      aria-label="Clear search"
+                      className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-700"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+
+                {!searchQuery.trim() && sections.length > 0 && (
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
+                    {sections.map((sec) => {
+                      const active = activeSectionKey === sec.section_key;
+                      return (
+                        <button
+                          key={sec.section_key}
+                          type="button"
+                          onClick={() => jumpToSection(sec.section_key)}
+                          style={
+                            active
+                              ? { backgroundColor: accentColor, borderColor: accentColor, color: '#FFFFFF' }
+                              : undefined
+                          }
+                          className={`px-2.5 py-1 rounded-full text-[11px] font-medium border whitespace-nowrap transition-colors ${
+                            active
+                              ? 'shadow-xs'
+                              : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                          }`}
+                        >
+                          {shortChipLabel(sec)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
-              <div className="space-y-4">
-                {filteredSections.map((sec) => {
-                  const Icon = iconFor(sec.section_key);
-                  return (
-                    <Card key={sec.section_key} className="p-4 space-y-2.5">
-                      <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
-                        <div className="w-7 h-7 rounded-md bg-slate-100 text-slate-900 flex items-center justify-center">
-                          <Icon className="w-4 h-4" />
-                        </div>
-                        <h2 className="text-sm font-semibold text-slate-900">{sec.title}</h2>
-                      </div>
+              {actionError && (
+                <div className="p-2.5 rounded-md bg-red-50 border border-red-200 text-xs text-red-700">
+                  {actionError}
+                </div>
+              )}
 
-                      {sec.section_key === 'welcome' && (
-                        <div className="text-xs text-slate-700 space-y-2 leading-relaxed">
-                          <p>{sec.content.welcomeMessage}</p>
-                          <p className="text-slate-600">{sec.content.propertyIntro}</p>
-                          {sec.content.importantNotes && (
-                            <div className="p-2.5 rounded bg-teal-50/70 border border-teal-200 text-teal-900 whitespace-pre-line">
-                              {sec.content.importantNotes}
-                            </div>
-                          )}
-                          <div className="text-[11px] text-slate-500 pt-1">
-                            Host: <strong>{sec.content.hostName}</strong> · {sec.content.hostPhone}
+              {filteredSections.length === 0 ? (
+                <Card className="p-8 text-center space-y-2.5">
+                  <div className="text-sm font-semibold text-slate-900">
+                    No welcome book sections match “{searchQuery}”
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    Try another keyword or clear your search filter.
+                  </p>
+                  <Button size="sm" variant="outline" onClick={() => setSearchQuery('')}>
+                    Clear Search
+                  </Button>
+                </Card>
+              ) : (
+                <div className="space-y-4">
+                  {filteredSections.map((sec) => {
+                    const Icon = iconFor(sec.section_key);
+                    return (
+                      <div id={`sec-${sec.section_key}`} key={sec.section_key} className="scroll-mt-24">
+                        <Card className="p-4 space-y-2.5">
+                        <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+                          <div
+                            className="w-7 h-7 rounded-md bg-slate-100 flex items-center justify-center shrink-0"
+                            style={{ color: accentColor }}
+                          >
+                            <Icon className="w-4 h-4" />
                           </div>
+                          <h2 className="text-sm font-semibold text-slate-900">{sec.title}</h2>
                         </div>
-                      )}
 
-                      {sec.section_key === 'checkin' && (
-                        <div className="text-xs text-slate-700 space-y-2.5">
-                          <div className="flex justify-between p-2.5 rounded bg-slate-50 border border-slate-200">
-                            <span className="text-slate-500">Check-In Time</span>
-                            <span className="font-semibold text-slate-900">{sec.content.checkInTime}</span>
-                          </div>
-                          {sec.content.smartLockCode ? (
-                            <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-between">
-                              <div>
-                                <div className="text-[11px] font-medium text-emerald-800">Verified Smart-Lock PIN</div>
-                                <div className="text-lg font-mono font-bold text-emerald-950 tracking-wider">
-                                  {sec.content.smartLockCode}#
-                                </div>
-                              </div>
-                              <Badge variant="success">Unlocked</Badge>
-                            </div>
-                          ) : (
-                            <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 flex items-center gap-2">
-                              <Lock className="w-4 h-4 shrink-0" />
-                              <span>Smart-lock PIN & backup lockbox instructions are hidden until stay code verification.</span>
-                            </div>
-                          )}
-                          <p><strong>Instructions:</strong> {sec.content.smartLockInstructions}</p>
-                          <p><strong>Parking:</strong> {sec.content.parkingInstructions}</p>
-                          <ol className="list-decimal pl-4 space-y-1 text-slate-600">
-                            {(sec.content.entrySteps || []).map((st: string, idx: number) => (
-                              <li key={idx}>{st}</li>
-                            ))}
-                          </ol>
-                        </div>
-                      )}
-
-                      {sec.section_key === 'rules' && (
-                        <div className="text-xs text-slate-700 space-y-2">
-                          <ul className="space-y-1.5">
-                            <li><strong>Quiet Hours:</strong> {sec.content.quietHours}</li>
-                            <li><strong>Smoking:</strong> {sec.content.smokingPolicy}</li>
-                            <li><strong>Pets:</strong> {sec.content.petPolicy}</li>
-                            <li><strong>Parties:</strong> {sec.content.partyPolicy}</li>
-                            <li><strong>Waste:</strong> {sec.content.wasteDisposal}</li>
-                            <li><strong>Pool / Patio:</strong> {sec.content.poolPolicy}</li>
-                          </ul>
-                          {isVerified && reservation && sec.content.requireAcknowledgment && (
-                            <div className="pt-2">
-                              {reservation.house_rules_acknowledged ? (
-                                <div className="inline-flex items-center gap-1.5 text-emerald-700 font-medium">
-                                  <CheckCircle2 className="w-4 h-4" /> House Rules Acknowledged
-                                </div>
-                              ) : (
-                                <Button size="sm" variant="secondary" onClick={handleAckRules}>
-                                  Acknowledge House Rules
-                                </Button>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {sec.section_key === 'wifi_home' && (
-                        <div className="text-xs text-slate-700 space-y-2.5">
-                          <div className="p-3 rounded-lg bg-slate-900 text-white flex items-center justify-between gap-2">
-                            <div className="font-mono">
-                              <div className="text-[11px] text-slate-400">Wi-Fi Network</div>
-                              <div className="font-semibold">{sec.content.wifiNetwork}</div>
-                              <div className="text-[11px] text-slate-400 mt-1">Password</div>
-                              <div className="text-teal-300 font-semibold">
-                                {sec.content.wifiPassword || 'Locked — Verify stay code above'}
-                              </div>
-                            </div>
-                            {sec.content.wifiPassword && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(sec.content.wifiPassword);
-                                  setCopiedWifi(true);
-                                  setTimeout(() => setCopiedWifi(false), 1800);
-                                }}
+                        {sec.section_key === 'welcome' && (
+                          <div className="text-xs text-slate-700 space-y-2 leading-relaxed">
+                            <p>{sec.content.welcomeMessage}</p>
+                            <p className="text-slate-600">{sec.content.propertyIntro}</p>
+                            {sec.content.importantNotes && (
+                              <div
+                                className="p-2.5 rounded bg-teal-50/70 border text-slate-800 whitespace-pre-line"
+                                style={{ borderColor: `${accentColor}45` }}
                               >
-                                {copiedWifi ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                                {copiedWifi ? 'Copied' : 'Copy'}
-                              </Button>
+                                {sec.content.importantNotes}
+                              </div>
+                            )}
+                            <div className="text-[11px] text-slate-500 pt-1">
+                              Host: <strong>{sec.content.hostName}</strong> ·{' '}
+                              {sec.content.hostPhone ? (
+                                <a href={phoneHref(sec.content.hostPhone)} className="underline hover:text-slate-900">
+                                  {sec.content.hostPhone}
+                                </a>
+                              ) : null}
+                            </div>
+                          </div>
+                        )}
+
+                        {sec.section_key === 'checkin' && (
+                          <div className="text-xs text-slate-700 space-y-2.5">
+                            <div className="flex justify-between p-2.5 rounded bg-slate-50 border border-slate-200">
+                              <span className="text-slate-500">Check-In Time</span>
+                              <span className="font-semibold text-slate-900">{sec.content.checkInTime}</span>
+                            </div>
+                            {sec.content.smartLockCode ? (
+                              <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-between gap-2">
+                                <div>
+                                  <div className="text-[11px] font-medium text-emerald-800">Verified Smart-Lock PIN</div>
+                                  <div className="text-lg font-mono font-bold text-emerald-950 tracking-wider">
+                                    {sec.content.smartLockCode}#
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(`${sec.content.smartLockCode}`);
+                                      setCopiedPin(true);
+                                      setTimeout(() => setCopiedPin(false), 1800);
+                                    }}
+                                  >
+                                    {copiedPin ? (
+                                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                    ) : (
+                                      <Copy className="w-3.5 h-3.5" />
+                                    )}
+                                    {copiedPin ? 'Copied' : 'Copy'}
+                                  </Button>
+                                  <Badge variant="success">Unlocked</Badge>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 flex items-center gap-2">
+                                <Lock className="w-4 h-4 shrink-0" />
+                                <span>
+                                  Smart-lock PIN &amp; backup lockbox instructions are hidden until stay code verification.
+                                </span>
+                              </div>
+                            )}
+                            {isVerified && sec.content.lockboxInstructions && (
+                              <div className="p-2.5 rounded bg-slate-50 border border-slate-200 text-slate-700">
+                                <strong>Backup Lockbox:</strong> {sec.content.lockboxInstructions}
+                              </div>
+                            )}
+                            <p>
+                              <strong>Instructions:</strong> {sec.content.smartLockInstructions}
+                            </p>
+                            <p>
+                              <strong>Parking:</strong> {sec.content.parkingInstructions}
+                            </p>
+                            <ol className="list-decimal pl-4 space-y-1 text-slate-600">
+                              {(sec.content.entrySteps || []).map((st: string, idx: number) => (
+                                <li key={idx}>{st}</li>
+                              ))}
+                            </ol>
+                          </div>
+                        )}
+
+                        {sec.section_key === 'rules' && (
+                          <div className="text-xs text-slate-700 space-y-2">
+                            <ul className="space-y-1.5">
+                              <li>
+                                <strong>Quiet Hours:</strong> {sec.content.quietHours}
+                              </li>
+                              <li>
+                                <strong>Smoking:</strong> {sec.content.smokingPolicy}
+                              </li>
+                              <li>
+                                <strong>Pets:</strong> {sec.content.petPolicy}
+                              </li>
+                              <li>
+                                <strong>Parties:</strong> {sec.content.partyPolicy}
+                              </li>
+                              <li>
+                                <strong>Waste:</strong> {sec.content.wasteDisposal}
+                              </li>
+                              <li>
+                                <strong>Pool / Patio:</strong> {sec.content.poolPolicy}
+                              </li>
+                            </ul>
+                            {isVerified && reservation && sec.content.requireAcknowledgment && (
+                              <div className="pt-2">
+                                {reservation.house_rules_acknowledged ? (
+                                  <div className="inline-flex items-center gap-1.5 text-emerald-700 font-medium">
+                                    <CheckCircle2 className="w-4 h-4" /> House Rules Acknowledged
+                                  </div>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    disabled={actionBusy === 'ack'}
+                                    onClick={handleAckRules}
+                                  >
+                                    {actionBusy === 'ack' ? 'Recording...' : 'Acknowledge House Rules'}
+                                  </Button>
+                                )}
+                              </div>
                             )}
                           </div>
-                          <p><strong>AC & Climate ({property.temp_unit}°):</strong> {sec.content.acInstructions}</p>
-                          <p><strong>Heating:</strong> {sec.content.heatingInstructions}</p>
-                          <p><strong>TV & Streaming:</strong> {sec.content.tvStreaming}</p>
-                          <p><strong>Kitchen:</strong> {sec.content.kitchenAppliances}</p>
-                          <p><strong>Laundry:</strong> {sec.content.washerDryer}</p>
-                        </div>
-                      )}
+                        )}
 
-                      {sec.section_key === 'local_picks' && (
-                        <div className="space-y-2">
-                          {(sec.content.items || []).map((item: any) => (
-                            <div key={item.id} className="p-2.5 rounded-md border border-slate-200 bg-slate-50/70">
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="text-xs font-semibold text-slate-900">{item.name}</span>
-                                <div className="flex items-center gap-1">
-                                  {item.isOwnerPick && <Badge variant="brand">Host Pick</Badge>}
-                                  <Badge variant="neutral">{item.category}</Badge>
+                        {sec.section_key === 'wifi_home' && (
+                          <div className="text-xs text-slate-700 space-y-2.5">
+                            <div className="p-3 rounded-lg bg-slate-900 text-white flex items-center justify-between gap-2">
+                              <div className="font-mono">
+                                <div className="text-[11px] text-slate-400">Wi-Fi Network</div>
+                                <div className="font-semibold">{sec.content.wifiNetwork}</div>
+                                <div className="text-[11px] text-slate-400 mt-1">Password</div>
+                                <div className="text-teal-300 font-semibold">
+                                  {sec.content.wifiPassword || 'Locked — Verify stay code above'}
                                 </div>
                               </div>
-                              <p className="text-xs text-slate-600 mt-1">{item.description}</p>
-                              <div className="text-[11px] text-slate-500 mt-1">{item.address}</div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {sec.section_key === 'emergency' && (
-                        <div className="text-xs text-slate-700 space-y-2">
-                          <div className="p-2.5 rounded bg-red-50 border border-red-200 text-red-900 font-semibold flex items-center justify-between">
-                            <span>Emergency Services ({property.country})</span>
-                            <span className="font-mono text-base">{sec.content.primaryNumber}</span>
-                          </div>
-                          <p><strong>24/7 Manager Line:</strong> {sec.content.managerEmergencyPhone}</p>
-                          <p><strong>Nearest Hospital:</strong> {sec.content.nearestHospital}</p>
-                          <p><strong>Fire:</strong> {sec.content.fireProcedure}</p>
-                          <p><strong>Water Shutoff:</strong> {sec.content.waterShutoffProcedure}</p>
-                          <p><strong>Electrical:</strong> {sec.content.electricalProcedure}</p>
-                        </div>
-                      )}
-
-                      {sec.section_key === 'getting_around' && (
-                        <div className="text-xs text-slate-700 space-y-1.5">
-                          <p><strong>Airport:</strong> {sec.content.airportDirections}</p>
-                          <p><strong>Public Transit:</strong> {sec.content.publicTransit}</p>
-                          <p><strong>Rideshare & Taxis:</strong> {sec.content.taxiRideshare}</p>
-                          <p><strong>Driving Notes:</strong> {sec.content.drivingNotes}</p>
-                        </div>
-                      )}
-
-                      {sec.section_key === 'checkout' && (
-                        <div className="text-xs text-slate-700 space-y-2">
-                          <div className="flex justify-between p-2 rounded bg-slate-50 border border-slate-200 font-medium">
-                            <span>Check-Out Time</span>
-                            <span>{sec.content.checkOutTime}</span>
-                          </div>
-                          <p>{sec.content.keyReturn}</p>
-                          <p><strong>Trash:</strong> {sec.content.wasteInstructions}</p>
-                          <p><strong>Dishwasher & Towels:</strong> {sec.content.dishwasherInstructions} {sec.content.laundryInstructions}</p>
-                          {isVerified && reservation && sec.content.departureConfirmEnabled && (
-                            <div className="pt-1">
-                              {reservation.check_out_status === 'Departed' ? (
-                                <Badge variant="success">Departure Confirmed — Safe Travels!</Badge>
-                              ) : (
-                                <Button size="sm" variant="primary" onClick={handleConfirmDeparture}>
-                                  Confirm Early / On-Time Departure
+                              {sec.content.wifiPassword && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(sec.content.wifiPassword);
+                                    setCopiedWifi(true);
+                                    setTimeout(() => setCopiedWifi(false), 1800);
+                                  }}
+                                >
+                                  {copiedWifi ? (
+                                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                  ) : (
+                                    <Copy className="w-3.5 h-3.5" />
+                                  )}
+                                  {copiedWifi ? 'Copied' : 'Copy'}
                                 </Button>
                               )}
                             </div>
-                          )}
-                        </div>
-                      )}
-                    </Card>
-                  );
-                })}
-              </div>
+                            <p>
+                              <strong>AC &amp; Climate (°{property.temp_unit}):</strong> {sec.content.acInstructions}
+                            </p>
+                            <p>
+                              <strong>Heating:</strong> {sec.content.heatingInstructions}
+                            </p>
+                            <p>
+                              <strong>TV &amp; Streaming:</strong> {sec.content.tvStreaming}
+                            </p>
+                            <p>
+                              <strong>Kitchen:</strong> {sec.content.kitchenAppliances}
+                            </p>
+                            <p>
+                              <strong>Laundry:</strong> {sec.content.washerDryer}
+                            </p>
+                          </div>
+                        )}
+
+                        {sec.section_key === 'local_picks' && (
+                          <div className="space-y-2">
+                            {(sec.content.items || []).map((item: any) => (
+                              <div key={item.id} className="p-2.5 rounded-md border border-slate-200 bg-slate-50/70">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-xs font-semibold text-slate-900">{item.name}</span>
+                                  <div className="flex items-center gap-1">
+                                    {item.isOwnerPick && <Badge variant="brand">Host Pick</Badge>}
+                                    <Badge variant="neutral">{item.category}</Badge>
+                                  </div>
+                                </div>
+                                <p className="text-xs text-slate-600 mt-1">{item.description}</p>
+                                {item.address && (
+                                  <a
+                                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                                      `${item.name}, ${item.address}`
+                                    )}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-[11px] text-teal-800 hover:underline mt-1.5"
+                                  >
+                                    <MapPin className="w-3 h-3" /> {item.address} · Open in Maps
+                                  </a>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {sec.section_key === 'emergency' && (
+                          <div className="text-xs text-slate-700 space-y-2">
+                            <a
+                              href={phoneHref(sec.content.primaryNumber)}
+                              className="p-2.5 rounded bg-red-50 border border-red-200 text-red-900 font-semibold flex items-center justify-between hover:bg-red-100/70 transition-colors"
+                            >
+                              <span>Emergency Services ({property.country}) · Tap to Call</span>
+                              <span className="font-mono text-base">{sec.content.primaryNumber}</span>
+                            </a>
+                            <p>
+                              <strong>24/7 Manager Line:</strong>{' '}
+                              {sec.content.managerEmergencyPhone ? (
+                                <a
+                                  href={phoneHref(sec.content.managerEmergencyPhone)}
+                                  className="underline text-slate-900 font-medium"
+                                >
+                                  {sec.content.managerEmergencyPhone}
+                                </a>
+                              ) : null}
+                            </p>
+                            <p>
+                              <strong>Nearest Hospital:</strong> {sec.content.nearestHospital}
+                            </p>
+                            <p>
+                              <strong>Fire:</strong> {sec.content.fireProcedure}
+                            </p>
+                            <p>
+                              <strong>Water Shutoff:</strong> {sec.content.waterShutoffProcedure}
+                            </p>
+                            <p>
+                              <strong>Electrical:</strong> {sec.content.electricalProcedure}
+                            </p>
+                          </div>
+                        )}
+
+                        {sec.section_key === 'getting_around' && (
+                          <div className="text-xs text-slate-700 space-y-1.5">
+                            <p>
+                              <strong>Airport:</strong> {sec.content.airportDirections}
+                            </p>
+                            <p>
+                              <strong>Public Transit:</strong> {sec.content.publicTransit}
+                            </p>
+                            <p>
+                              <strong>Rideshare &amp; Taxis:</strong> {sec.content.taxiRideshare}
+                            </p>
+                            <p>
+                              <strong>Driving Notes:</strong> {sec.content.drivingNotes}
+                            </p>
+                          </div>
+                        )}
+
+                        {sec.section_key === 'checkout' && (
+                          <div className="text-xs text-slate-700 space-y-2">
+                            <div className="flex justify-between p-2 rounded bg-slate-50 border border-slate-200 font-medium">
+                              <span>Check-Out Time</span>
+                              <span>{sec.content.checkOutTime}</span>
+                            </div>
+                            <p>{sec.content.keyReturn}</p>
+                            <p>
+                              <strong>Trash:</strong> {sec.content.wasteInstructions}
+                            </p>
+                            <p>
+                              <strong>Dishwasher &amp; Towels:</strong> {sec.content.dishwasherInstructions}{' '}
+                              {sec.content.laundryInstructions}
+                            </p>
+                            {isVerified && reservation && sec.content.departureConfirmEnabled && (
+                              <div className="pt-1">
+                                {reservation.check_out_status === 'Departed' ? (
+                                  <Badge variant="success">Departure Confirmed — Safe Travels!</Badge>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    variant="primary"
+                                    disabled={actionBusy === 'depart'}
+                                    onClick={handleConfirmDeparture}
+                                  >
+                                    {actionBusy === 'depart'
+                                      ? 'Confirming...'
+                                      : 'Confirm Early / On-Time Departure'}
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </Card>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </>
           )}
 
@@ -725,7 +1041,17 @@ export function GuestPortalPage({ slug }: { slug: string }) {
                   />
                   <div className="grid grid-cols-2 gap-3">
                     <Select label="Category" value={supCategory} onChange={(e) => setSupCategory(e.target.value)}>
-                      {['Plumbing', 'Electrical', 'Air conditioning', 'Heating', 'Wi-Fi', 'Appliances', 'Access and locks', 'Cleaning', 'Other'].map((c) => (
+                      {[
+                        'Plumbing',
+                        'Electrical',
+                        'Air conditioning',
+                        'Heating',
+                        'Wi-Fi',
+                        'Appliances',
+                        'Access and locks',
+                        'Cleaning',
+                        'Other',
+                      ].map((c) => (
                         <option key={c}>{c}</option>
                       ))}
                     </Select>
@@ -771,12 +1097,15 @@ export function GuestPortalPage({ slug }: { slug: string }) {
               </Card>
 
               <Card className="p-4 space-y-2.5">
-                <div className="text-xs font-semibold text-slate-900">Your Support & Work Order Tracker</div>
+                <div className="text-xs font-semibold text-slate-900">Your Support &amp; Work Order Tracker</div>
                 {requests.length === 0 ? (
                   <div className="text-xs text-slate-400">No requests submitted for this property.</div>
                 ) : (
                   requests.map((r) => (
-                    <div key={r.id} className="p-2.5 rounded border border-slate-200 bg-slate-50 flex items-center justify-between gap-2">
+                    <div
+                      key={r.id}
+                      className="p-2.5 rounded border border-slate-200 bg-slate-50 flex items-center justify-between gap-2"
+                    >
                       <div>
                         <div className="text-xs font-semibold text-slate-900">{r.subject}</div>
                         <div className="text-[11px] text-slate-500">
@@ -798,7 +1127,7 @@ export function GuestPortalPage({ slug }: { slug: string }) {
               <div>
                 <h2 className="text-sm font-semibold text-slate-900">Honest Stay Feedback</h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Share candid feedback on cleaning, check-in, comfort & maintenance—all ratings help our operations team improve.
+                  Share candid feedback on cleaning, check-in, comfort &amp; maintenance—all ratings help our operations team improve.
                 </p>
               </div>
               {fbError && (
@@ -806,7 +1135,7 @@ export function GuestPortalPage({ slug }: { slug: string }) {
               )}
               {fbSent ? (
                 <div className="p-4 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-800">
-                  Thank you! Your feedback has been recorded directly for the host & operations team.
+                  Thank you! Your feedback has been recorded directly for the host &amp; operations team.
                 </div>
               ) : (
                 <form onSubmit={handleSubmitFeedback} className="space-y-3">
@@ -852,7 +1181,7 @@ export function GuestPortalPage({ slug }: { slug: string }) {
         </div>
 
         {/* Sticky Mobile Bottom Tab Bar */}
-        <nav className="sticky bottom-0 bg-white border-t border-slate-200 grid grid-cols-4 text-[11px] font-medium">
+        <nav className="sticky bottom-0 bg-white border-t border-slate-200 grid grid-cols-4 text-[11px] font-medium z-30">
           {[
             { id: 'guide' as const, label: 'Welcome Book', icon: Sparkles },
             { id: 'ai' as const, label: 'AI Assistant', icon: Bot },
@@ -865,8 +1194,9 @@ export function GuestPortalPage({ slug }: { slug: string }) {
               <button
                 key={item.id}
                 onClick={() => setTab(item.id)}
+                style={active ? { color: accentColor } : undefined}
                 className={`py-2.5 flex flex-col items-center gap-1 ${
-                  active ? 'text-teal-700 font-semibold' : 'text-slate-500 hover:text-slate-900'
+                  active ? 'font-semibold' : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
                 <Icon className="w-4 h-4" />

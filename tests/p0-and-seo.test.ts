@@ -14,6 +14,7 @@ import { PUBLIC_SEO_META, getSeoMetaForPath } from '../src/seo/Seo.js';
 import { PUBLIC_PAGE_PATHS } from '../src/routes.js';
 import { GUIDEBOOK_TEMPLATES } from '../src/pages/TemplatesPage.js';
 import { isPlatformAdminEmail } from '../server/domain.js';
+import { parseFeedbackRating, sortGuidebookSections } from '../server/lib/guest-helpers.js';
 
 test('cn() resolves conflicting Tailwind classes cleanly via tailwind-merge', () => {
   const merged = cn('bg-slate-900 text-white border-slate-900', 'bg-white text-slate-900 border-white');
@@ -108,4 +109,27 @@ test('isPlatformAdminEmail enforces strict founder email allowlist', () => {
   assert.equal(isPlatformAdminEmail('claire@sunbeltstays.com'), false);
   assert.equal(isPlatformAdminEmail(''), false);
   assert.equal(isPlatformAdminEmail(null), false);
+});
+
+test('guest-helpers sort sections by section_order_json and validate 1-5 ratings', () => {
+  const ordered = sortGuidebookSections(
+    [
+      { section_key: 'welcome', sort_order: 0 },
+      { section_key: 'checkin', sort_order: 1 },
+      { section_key: 'wifi_home', sort_order: 3 },
+    ],
+    JSON.stringify(['wifi_home', 'welcome', 'checkin'])
+  );
+  assert.deepEqual(
+    ordered.map((s) => s.section_key),
+    ['wifi_home', 'welcome', 'checkin']
+  );
+
+  assert.equal(parseFeedbackRating(5), 5);
+  assert.equal(parseFeedbackRating(1), 1);
+  assert.equal(parseFeedbackRating(undefined), 5);
+  assert.equal(parseFeedbackRating(0), null);
+  assert.equal(parseFeedbackRating(6), null);
+  assert.equal(parseFeedbackRating(-2), null);
+  assert.equal(parseFeedbackRating(3.5), null);
 });

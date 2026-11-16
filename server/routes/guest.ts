@@ -19,6 +19,7 @@ import {
   hashRateLimitKey,
   recordRateLimitOutcome,
 } from '../lib/rate-limit.js';
+import { parseFeedbackRating, sortGuidebookSections } from '../lib/guest-helpers.js';
 
 export const guestRouter = Router();
 
@@ -92,8 +93,9 @@ guestRouter.get(
       'SELECT * FROM guidebook_sections WHERE property_id = $1 AND is_visible = 1 ORDER BY sort_order ASC',
       [prop.id]
     );
+    const orderedSections = sortGuidebookSections(sectionsRaw, guidebook?.section_order_json);
 
-    const sections = sectionsRaw.map((sec) => {
+    const sections = orderedSections.map((sec) => {
       let content = JSON.parse(sec.content_json);
       if (sec.section_key === 'checkin') {
         content = decryptCheckinContent(content);
@@ -527,6 +529,19 @@ guestRouter.post(
     if (!prop) return res.status(404).json({ error: 'Property not found.' });
 
     const b = req.body || {};
+    const cleaningRating = parseFeedbackRating(b.cleaning_rating);
+    const checkinRating = parseFeedbackRating(b.checkin_rating);
+    const comfortRating = parseFeedbackRating(b.comfort_rating);
+    const maintenanceRating = parseFeedbackRating(b.maintenance_rating);
+    if (
+      cleaningRating === null ||
+      checkinRating === null ||
+      comfortRating === null ||
+      maintenanceRating === null
+    ) {
+      return res.status(400).json({ error: 'All ratings must be whole numbers between 1 and 5.' });
+    }
+
     const verification = await resolveGuestVerification(prop, b.code);
     const reservation = verification.valid ? verification.reservation : null;
     const id = uid('fb');
@@ -539,12 +554,12 @@ guestRouter.post(
         prop.organization_id,
         prop.id,
         reservation?.id || null,
-        b.guest_name || reservation?.guest_name || 'Verified Stay Guest',
-        Number(b.cleaning_rating || 5),
-        Number(b.checkin_rating || 5),
-        Number(b.comfort_rating || 5),
-        Number(b.maintenance_rating || 5),
-        b.comments || '',
+        String(b.guest_name || reservation?.guest_name || 'Verified Stay Guest').trim().slice(0, 120),
+        cleaningRating,
+        checkinRating,
+        comfortRating,
+        maintenanceRating,
+        String(b.comments || '').trim().slice(0, 2000),
         b.follow_up_requested ? 1 : 0,
         b.follow_up_requested ? 'Follow-up Open' : 'None',
         nowIso(),
