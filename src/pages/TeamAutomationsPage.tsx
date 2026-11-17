@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { UserPlus, BellRing } from 'lucide-react';
-import { apiFetch } from '../lib/api';
+import { apiFetch, getApiContext } from '../lib/api';
 import { formatDateTimeShort } from '../lib/format';
 import { Badge, Button, Card, Input, Modal, PageHeader, Select, statusToBadgeVariant } from '../components/ui';
 import type { OrgMember } from '../lib/types';
@@ -13,27 +13,36 @@ export function TeamPage({ orgId, onRefreshContext }: { orgId: string; onRefresh
   const [role, setRole] = useState('Cleaning Staff');
   const [inviteError, setInviteError] = useState('');
   const [inviteNotice, setInviteNotice] = useState('');
+  const [invitationToken, setInvitationToken] = useState('');
+  const [properties, setProperties] = useState<any[]>([]);
+  const [assignedIds, setAssignedIds] = useState<string[]>([]);
+  const [invitations, setInvitations] = useState<any[]>([]);
+  const canInvite = ['Organization Owner','Organization Admin','Platform Super Admin'].includes(getApiContext().actorRole);
 
   const load = async () => {
     const list = await apiFetch<OrgMember[]>('/api/admin/team');
     setMembers(list);
+    setProperties(await apiFetch<any[]>('/api/properties'));
+    if (canInvite) setInvitations(await apiFetch<any[]>('/api/admin/team/invitations'));
   };
 
   useEffect(() => {
-    load();
+    setInvitationToken(''); setInviteNotice(''); setInvitations([]);
+    void load().catch(err => setInviteError(err.message || 'Unable to load team.'));
   }, [orgId]);
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     setInviteError('');
     try {
-      await apiFetch('/api/admin/team/invite', {
+      const invitation = await apiFetch<{ invitation_token: string }>('/api/admin/team/invite', {
         method: 'POST',
-        body: JSON.stringify({ name, email, role }),
+        body: JSON.stringify({ name, email, role, assigned_property_ids: ['Organization Admin','Property Manager'].includes(role) ? ['*'] : assignedIds }),
       });
       setInviteOpen(false);
-      setInviteNotice(`Invited ${name} (${email}) as ${role}. They can sign up with this email to join your workspace automatically.`);
-      setTimeout(() => setInviteNotice(''), 6000);
+      setInvitationToken(invitation.invitation_token);
+      setInviteNotice(`Pending invitation created for ${email}. No email has been sent. Share the one-time token securely; expires in 48 hours.`);
+      setAssignedIds([]);
       setName('');
       setEmail('');
       await load();
@@ -55,13 +64,28 @@ export function TeamPage({ orgId, onRefreshContext }: { orgId: string; onRefresh
                 {inviteNotice}
               </span>
             )}
-            <Button size="sm" variant="primary" onClick={() => { setInviteError(''); setInviteOpen(true); }}>
+            {canInvite && <Button size="sm" variant="primary" onClick={() => { setInviteError(''); setInviteOpen(true); }}>
               <UserPlus className="w-4 h-4" /> Invite Team Member
-            </Button>
+            </Button>}
           </div>
         }
       />
 
+      {invitationToken && <Card className="p-4 space-y-2">
+        <p className="text-sm">Invitation token — shown once. Ask the recipient to sign in with a verified email, then paste it in Accept invitation. No access is active yet.</p>
+        <Input label="One-time invitation token" readOnly value={invitationToken} />
+        <Button onClick={() => { setInvitationToken(''); setInviteNotice(''); }}>Dismiss token</Button>
+      </Card>}
+      {canInvite && invitations.length > 0 && <Card className="p-4 space-y-2">
+        <h2 className="font-semibold">Invitations (no delivery claimed)</h2>
+        {invitations.map(inv => <div key={inv.id} className="flex flex-wrap items-center gap-2 text-sm">
+          <span>{inv.email} · {inv.role} · {inv.status} · expires {formatDateTimeShort(inv.expires_at)}</span>
+          {inv.status === 'pending' && <Button size="sm" onClick={async () => {
+            try { await apiFetch(`/api/admin/team/invitations/${inv.id}/revoke`,{method:'POST'}); await load(); }
+            catch (err: any) { setInviteNotice(err.message || 'Unable to revoke invitation.'); }
+          }}>Revoke</Button>}
+        </div>)}
+      </Card>}
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -103,7 +127,7 @@ export function TeamPage({ orgId, onRefreshContext }: { orgId: string; onRefresh
                     <div className="flex items-center gap-1.5">
                       <Badge variant="success">{m.status}</Badge>
                       {m.neon_linked ? (
-                        <Badge variant="neutral">Verified Account</Badge>
+                        <Badge variant="neutral">Linked Account</Badge>
                       ) : (
                         <Badge variant="warning">Pending Sign-In</Badge>
                       )}
@@ -135,9 +159,13 @@ export function TeamPage({ orgId, onRefreshContext }: { orgId: string; onRefresh
               <option key={r}>{r}</option>
             ))}
           </Select>
+          {!['Organization Admin','Property Manager'].includes(role) && <fieldset className="space-y-2">
+            <legend className="text-xs font-semibold">Assigned properties (no selection means no property access)</legend>
+            {properties.map(p => <label key={p.id} className="flex gap-2 text-sm"><input type="checkbox" checked={assignedIds.includes(p.id)} onChange={e => setAssignedIds(ids => e.target.checked ? [...ids,p.id] : ids.filter(id => id !== p.id))} />{p.name}</label>)}
+          </fieldset>}
           <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
             <Button type="button" variant="outline" onClick={() => setInviteOpen(false)}>Cancel</Button>
-            <Button type="submit" variant="primary">Send Invite</Button>
+            <Button type="submit" variant="primary">Create Pending Invitation</Button>
           </div>
         </form>
       </Modal>

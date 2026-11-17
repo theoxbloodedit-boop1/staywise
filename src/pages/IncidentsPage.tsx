@@ -1,3 +1,4 @@
+import { PrivateEvidenceImage } from '../components/PrivateEvidenceImage';
 import React, { useEffect, useState } from 'react';
 import { Plus, Wrench, CheckCircle2, RotateCcw, Camera, ShieldAlert } from 'lucide-react';
 import { apiFetch, uploadEvidencePhoto } from '../lib/api';
@@ -101,7 +102,7 @@ export function IncidentsPage({
     if (!file) return;
     const reader = new FileReader();
     reader.onload = async () => {
-      const uploadedUrl = await uploadEvidencePhoto(reader.result as string, 'incident');
+      const uploadedUrl = await uploadEvidencePhoto(reader.result as string, 'incident', undefined, inc.property_id);
       await patchIncident(inc, {
         resolution_urls: [...inc.resolution_urls, uploadedUrl],
       });
@@ -245,9 +246,9 @@ export function IncidentsPage({
                 {selected.resolution_urls.length > 0 && (
                   <div className="grid grid-cols-3 gap-2">
                     {selected.resolution_urls.map((u, idx) => (
-                      <img
+                      <PrivateEvidenceImage
                         key={idx}
-                        src={u}
+                        mediaId={u}
                         alt={`${selected.work_order_code} repair resolution evidence ${idx + 1}`}
                         loading="lazy"
                         className="h-16 w-full object-cover rounded border border-slate-200"

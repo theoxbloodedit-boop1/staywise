@@ -1,3 +1,4 @@
+import { authorizeProperty } from '../lib/authorization.js';
 import { Router } from 'express';
 import { db } from '../db.js';
 import { buildDefaultSections, defaultSectionOrder } from '../seed-data.js';

@@ -1,3 +1,5 @@
+import { validateEvidenceReferences } from '../lib/private-media.js';
+import { authorizeProperty, validateReservationReference, resolveAssignee } from '../lib/authorization.js';
 import { Router } from 'express';
 import { db } from '../db.js';
 import {
@@ -9,6 +11,7 @@ import {
   logAudit,
   nowIso,
   requireAuth,
+  requireRoles,
   uid,
 } from '../domain.js';
 
@@ -40,7 +43,7 @@ incidentsRouter.get(
     const rows = await db.query<any>(
       `SELECT i.*, p.name as property_name, p.city as property_city, p.readiness_status
        FROM incidents i
-       JOIN properties p ON p.id = i.property_id
+       JOIN properties p ON p.id = i.property_id AND p.organization_id = i.organization_id
        WHERE i.organization_id = $1
        ORDER BY CASE i.priority WHEN 'Critical' THEN 0 WHEN 'High' THEN 1 WHEN 'Medium' THEN 2 ELSE 3 END, i.created_at DESC`,
       [actor.organizationId]
@@ -73,8 +76,15 @@ incidentsRouter.post(
       [b.property_id, actor.organizationId]
     );
     if (!prop) return res.status(404).json({ error: 'Property not found in organization.' });
+    await authorizeProperty(db, actor, prop.id);
     if (!canAccessProperty(actor, prop.id)) return res.status(403).json({ error: 'Property access denied.' });
 
+    await validateReservationReference(db, actor, prop.id, b.reservation_id);
+    const assignee = await resolveAssignee(db, actor, prop.id, b.assigned_to_id, b.assigned_to_name);
+    b.assigned_to_id = assignee.id;
+    b.assigned_to_name = assignee.name;
+
+    await validateEvidenceReferences(db, actor.organizationId, prop.id, b.attachment_urls || []);
     const id = uid('inc');
     const woCode = `WO-${Math.floor(1050 + Math.random() * 8900)}`;
     const priority = ['Critical', 'High', 'Medium', 'Low'].includes(b.priority) ? b.priority : 'Medium';
@@ -135,7 +145,7 @@ incidentsRouter.post(
 
     const created = await db.queryOne<any>(
       `SELECT i.*, p.name as property_name, p.city as property_city, p.readiness_status
-       FROM incidents i JOIN properties p ON p.id = i.property_id WHERE i.id = $1`,
+       FROM incidents i JOIN properties p ON p.id = i.property_id AND p.organization_id = i.organization_id WHERE i.id = $1`,
       [id]
     );
 
@@ -150,6 +160,7 @@ incidentsRouter.post(
 
 incidentsRouter.patch(
   '/:id',
+  requireRoles('Organization Owner', 'Organization Admin', 'Property Manager', 'Concierge', 'Inspector', 'Maintenance Technician', 'Platform Super Admin'),
   ah(async (req, res) => {
     const actor = getActor(req);
     const existing = await db.queryOne<any>(
@@ -157,6 +168,7 @@ incidentsRouter.patch(
       [req.params.id, actor.organizationId]
     );
     if (!existing) return res.status(404).json({ error: 'Incident not found in organization.' });
+    await authorizeProperty(db, actor, existing.property_id);
     if (!canAccessProperty(actor, existing.property_id)) return res.status(403).json({ error: 'Property access denied.' });
 
     const b = req.body || {};
@@ -179,6 +191,14 @@ incidentsRouter.patch(
         error: 'Only managers or concierges may reassign technicians, change priority, or alter deadlines.',
       });
     }
+
+    if (b.assigned_to_id !== undefined || b.assigned_to_name !== undefined) {
+      const assignee = await resolveAssignee(db, actor, existing.property_id, b.assigned_to_id, b.assigned_to_name);
+      b.assigned_to_id = assignee.id;
+      b.assigned_to_name = assignee.name;
+    }
+
+    if (b.resolution_urls !== undefined) await validateEvidenceReferences(db, actor.organizationId, existing.property_id, b.resolution_urls, 'incident');
 
     const now = nowIso();
     const resolvedAt = nextStatus === 'Resolved' ? now : nextStatus === 'Reopened' ? null : existing.resolved_at;
@@ -234,7 +254,7 @@ incidentsRouter.patch(
 
     const updated = await db.queryOne<any>(
       `SELECT i.*, p.name as property_name, p.city as property_city, p.readiness_status
-       FROM incidents i JOIN properties p ON p.id = i.property_id WHERE i.id = $1`,
+       FROM incidents i JOIN properties p ON p.id = i.property_id AND p.organization_id = i.organization_id WHERE i.id = $1`,
       [existing.id]
     );
 

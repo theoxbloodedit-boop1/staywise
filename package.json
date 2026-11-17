@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
     "db:migrate": "tsx server/migrate.ts",
-    "db:seed": "tsx server/seed-cli.ts"
+    "db:seed": "tsx server/seed-cli.ts",
+    "typecheck:tests": "tsc --project tsconfig.tests.json --noEmit"
   },
   "dependencies": {
     "@fontsource/inter": "^5.1.1",
@@ -31,10 +32,12 @@
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "sharp": "^0.35.5",
     "tailwind-merge": "^3.7.0",
     "ws": "^8.23.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.16",
     "@types/compression": "^1.8.1",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.0",
@@ -50,5 +53,8 @@
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vite": "^6.0.6"
+  },
+  "overrides": {
+    "@vercel/cli-config": "0.4.0"
   }
 }

@@ -1,3 +1,4 @@
+import { validateAssignments } from '../lib/authorization.js';
 import { Router } from 'express';
 import { db } from '../db.js';
 import { getNeonDatabaseOverview } from '../backup.js';
@@ -59,14 +60,14 @@ platformCrmRouter.get(
         `SELECT s.*, o.name as org_name, p.name as property_name
          FROM support_requests s
          JOIN organizations o ON o.id = s.organization_id
-         LEFT JOIN properties p ON p.id = s.property_id
+         LEFT JOIN properties p ON p.id = s.property_id AND p.organization_id = s.organization_id
          ORDER BY s.created_at DESC LIMIT 40`
       ),
       db.query<any>(
         `SELECT f.*, o.name as org_name, p.name as property_name
          FROM feedback f
          JOIN organizations o ON o.id = f.organization_id
-         LEFT JOIN properties p ON p.id = f.property_id
+         LEFT JOIN properties p ON p.id = f.property_id AND p.organization_id = f.organization_id
          ORDER BY f.created_at DESC LIMIT 40`
       ),
       db.query<any>(
@@ -262,6 +263,7 @@ platformCrmRouter.patch(
       return res.status(400).json({ error: 'Status must be Active or Inactive.' });
     }
 
+    await validateAssignments(db, mem.organization_id, nextRole, b.assigned_property_ids ?? JSON.parse(mem.assigned_property_ids_json));
     await db.execute('UPDATE organization_memberships SET role = $1, status = $2 WHERE id = $3', [
       nextRole,
       nextStatus,
