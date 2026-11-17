@@ -563,6 +563,17 @@ test("Control Center: signed identity, explicit roles, safe directories, support
         [digest(tokens.super)],
       ),
     );
+    const futureIssued = await jwt.sign({ iat: Math.floor(Date.now() / 1000) + 120 }, 'super');
+    const beforeFutureTest = tokens.super;
+    tokens.super = futureIssued;
+    assert.equal((await request('/overview')).status, 401);
+    tokens.super = beforeFutureTest;
+    assert.equal((await request('/organizations?start=2026-02-30')).status, 422);
+    assert.equal((await request('/organizations?start=2026-03-01&end=2026-01-01')).status, 422);
+    const filteredStatus = await (await request('/organizations?status=Suspended')).json() as any;
+    assert.ok(filteredStatus.rows.every((row:any)=>row.account_status==='Suspended'));
+    const literalSearch = await (await request('/organizations?q='+encodeURIComponent("' OR 1=1 --"))).json() as any;
+    assert.equal(literalSearch.total, 0);
     const expired = await jwt.sign(
       { iat: Math.floor(Date.now() / 1000) - 1900 },
       "super",

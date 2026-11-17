@@ -123,6 +123,8 @@ export async function controlPrincipal(
   );
   const tokenHash = digest(token),
     now = Math.floor(Date.now() / 1000);
+  if (identity.issuedAt > now + 30)
+    throw new ControlError(401, "Invalid future-issued administrative token");
   return database.transaction(async (tx) => {
     const profile = await tx.queryOne<any>(
       `SELECT a.user_id,a.role,a.status,a.revoked_before FROM admin_profiles a JOIN users u ON u.id=a.user_id WHERE u.neon_auth_id=$1 AND u.account_status='Active' FOR SHARE OF a`,
