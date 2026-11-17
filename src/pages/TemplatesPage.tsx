@@ -161,7 +161,7 @@ export function TemplatesPage({
         onOpenAuth={onOpenAuth}
       />
 
-      <main className="flex-1 py-12 sm:py-16 px-4 sm:px-6 max-w-7xl mx-auto w-full space-y-10">
+      <main id="main-content" className="flex-1 py-12 sm:py-16 px-4 sm:px-6 max-w-7xl mx-auto w-full space-y-10">
         <div className="max-w-3xl space-y-3">
           <Badge variant="brand">12 Property Templates · Free in Every Workspace</Badge>
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900">

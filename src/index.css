@@ -1,10 +1,3 @@
-@import '@fontsource/plus-jakarta-sans/latin-500.css';
-@import '@fontsource/plus-jakarta-sans/latin-600.css';
-@import '@fontsource/plus-jakarta-sans/latin-700.css';
-@import '@fontsource/plus-jakarta-sans/latin-800.css';
-@import '@fontsource/plus-jakarta-sans/latin-ext-600.css';
-@import '@fontsource/plus-jakarta-sans/latin-ext-700.css';
-
 @import '@fontsource/inter/latin-400.css';
 @import '@fontsource/inter/latin-500.css';
 @import '@fontsource/inter/latin-600.css';
@@ -39,7 +32,7 @@
   h2,
   h3,
   h4 {
-    font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     letter-spacing: -0.02em;
   }
 
@@ -83,4 +76,21 @@
   .print-break-inside-avoid {
     break-inside: avoid;
   }
+}
+
+/* Shared foundations: visible keyboard access and a quiet, reduced-motion UI. */
+:root { --sw-navy: #10182B; --sw-teal: #087F78; --sw-cloud: #F7F9FC; --sw-mist: #DCE5EF; }
+body { margin: 0; color: var(--sw-navy); }
+*, *::before, *::after { box-sizing: border-box; }
+:where(a, button, input, select, textarea, summary):focus-visible {
+  outline: 3px solid #087F78 !important; outline-offset: 3px;
+}
+.skip-link { position: fixed; top: -100px; left: 16px; z-index: 100; padding: 12px 20px; background: white; color: #10182B; border-radius: 8px; }
+.skip-link:focus { top: 12px; }
+.marketing-page { overflow-wrap: break-word; }
+.marketing-page main p { line-height: 1.7; }
+.marketing-page main section { scroll-margin-top: 90px; }
+.marketing-page .text-\[13px\] { font-size: 14px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }

@@ -12,7 +12,7 @@ export function Card({
   className?: string;
 }) {
   return (
-    <div className={cn('bg-white border border-slate-200 rounded-lg shadow-[0_1px_2px_rgba(15,23,42,0.04)]', className)}>
+    <div className={cn('bg-white border border-slate-200 rounded-xl shadow-[0_1px_2px_rgba(15,23,42,0.04)]', className)}>
       {children}
     </div>
   );
@@ -100,7 +100,7 @@ export function Input({
       {label && <span className="block text-xs font-medium text-slate-700">{label}</span>}
       <input
         className={cn(
-          'w-full h-9 px-3 text-[13px] bg-white border border-slate-200 rounded-md text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-900/10',
+          'w-full min-h-[44px] px-3 text-[13px] bg-white border border-slate-200 rounded-md text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-900/10',
           className
         )}
         {...props}
@@ -139,7 +139,7 @@ export function Select({
       {label && <span className="block text-xs font-medium text-slate-700">{label}</span>}
       <select
         className={cn(
-          'w-full h-9 px-2.5 text-[13px] bg-white border border-slate-200 rounded-md text-slate-900 focus:outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-900/10',
+          'w-full min-h-[44px] px-2.5 text-[13px] bg-white border border-slate-200 rounded-md text-slate-900 focus:outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-900/10',
           className
         )}
         {...props}

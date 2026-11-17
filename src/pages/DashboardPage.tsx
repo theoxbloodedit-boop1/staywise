@@ -11,6 +11,7 @@ import {
   ShieldAlert,
   Building2,
 } from 'lucide-react';
+import { OperationalStatus } from '../components/ui/OperationalStatus';
 import { apiFetch } from '../lib/api';
 import { formatMetricPercent, formatMetricScore } from '../lib/metrics';
 import { Badge, Button, Card, PageHeader, statusToBadgeVariant } from '../components/ui';
@@ -28,12 +29,16 @@ export function DashboardPage({
   const [range, setRange] = useState<'7d' | '30d' | '90d'>('30d');
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   const load = async () => {
     setLoading(true);
+    setError('');
     try {
       const res = await apiFetch(`/api/admin/dashboard?range=${range}`);
       setData(res);
+    } catch {
+      setError('We could not load your operations. Check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -42,6 +47,8 @@ export function DashboardPage({
   useEffect(() => {
     load();
   }, [orgId, range]);
+
+  if (error) return <Card className="p-8 space-y-4"><h1 className="text-xl font-semibold">Operations unavailable</h1><p role="alert" className="text-sm text-slate-600">{error}</p><Button onClick={load}>Try again</Button></Card>;
 
   if (loading || !data) {
     return (
@@ -88,11 +95,11 @@ export function DashboardPage({
       />
 
       {/* Primary KPI Strip */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3.5">
+      <div className="grid grid-cols-1 min-[390px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3.5">
         {[
           { label: 'Total Properties', value: ind.totalProperties, sub: `${ind.activeStays} active stays`, route: 'properties' as AppRoute },
           {
-            label: 'Ready Properties',
+            label: 'Recorded Ready',
             value: ind.readyProperties,
             sub: `${ind.notReadyProperties} not ready`,
             tone: ind.notReadyProperties > 0 ? 'text-emerald-700' : 'text-emerald-700',
@@ -147,13 +154,13 @@ export function DashboardPage({
       <Card className="overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
-            <h2 className="text-sm font-semibold text-slate-900">Property Readiness Status</h2>
+            <h2 className="text-sm font-semibold text-slate-900">Property Operations Status</h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              A home turns Ready once cleaning is approved, inspection passes, and zero critical fixes remain open.
+              Recorded server status and checks. Final readiness validation is under development; this is not a safety certification.
             </p>
           </div>
           <div className="flex items-center gap-2 text-xs">
-            <Badge variant="success">{ind.readyProperties} Ready</Badge>
+            <Badge variant="success">{ind.readyProperties} recorded Ready</Badge>
             <Badge variant="danger">{ind.notReadyProperties} Not Ready</Badge>
           </div>
         </div>
@@ -245,10 +252,7 @@ export function DashboardPage({
                     </td>
                     <td className="py-3 px-4">
                       <div className="space-y-0.5">
-                        <Badge variant={statusToBadgeVariant(prop.readiness_status)}>{prop.readiness_status}</Badge>
-                        <div className="text-[11px] text-slate-500 max-w-[230px] truncate" title={prop.readiness_reason}>
-                          {prop.readiness_reason}
-                        </div>
+                        <OperationalStatus status={prop.readiness_status === 'Ready' ? undefined : prop.readiness_status} reason={prop.readiness_status === 'Ready' ? `Server record: Ready. Final validation unavailable. ${prop.readiness_reason || ''}` : prop.readiness_reason} />
                       </div>
                     </td>
                     <td className="py-3 px-4 text-right">
