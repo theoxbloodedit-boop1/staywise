@@ -45,6 +45,9 @@ export interface VerifiedNeonUser {
   email: string;
   name: string;
   emailVerified: boolean;
+  authenticationTime?: number;
+  issuedAt?: number;
+  expiresAt?: number;
 }
 
 export async function verifyNeonAuthJwt(token: string | undefined): Promise<VerifiedNeonUser | null> {
@@ -72,7 +75,7 @@ export async function verifyNeonAuthJwt(token: string | undefined): Promise<Veri
     const emailVerified = payload.email_verified === true;
 
     if (!sub || !email) return null;
-    return { sub, email, name, emailVerified };
+    return { sub, email, name, emailVerified, authenticationTime: typeof payload.auth_time === 'number' ? payload.auth_time : undefined, issuedAt: payload.iat, expiresAt: payload.exp };
   } catch {
     return null;
   }

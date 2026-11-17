@@ -11,7 +11,7 @@ export async function createJwtFixture() {
   const issuer = `http://127.0.0.1:${address.port}`;
   return {
     issuer,
-    sign: (claims: Record<string, unknown> = {}, sub = 'auth-a') => new SignJWT({ email: 'a@example.test', email_verified: true, aud: 'staywise-test', ...claims }).setProtectedHeader({ alg: 'RS256', kid: 'test-key' }).setSubject(sub).setIssuer(issuer).setIssuedAt().setExpirationTime(typeof claims.exp === 'number' ? claims.exp : '5m').sign(privateKey),
+    sign: (claims: Record<string, unknown> = {}, sub = 'auth-a') => new SignJWT({ email: 'a@example.test', email_verified: true, aud: 'staywise-test', ...claims }).setProtectedHeader({ alg: 'RS256', kid: 'test-key' }).setSubject(sub).setIssuer(issuer).setIssuedAt(typeof claims.iat === 'number' ? claims.iat : Math.floor(Date.now()/1000)).setExpirationTime(typeof claims.exp === 'number' ? claims.exp : '5m').sign(privateKey),
     close: () => new Promise<void>((resolve, reject) => { server.close(e => e ? reject(e) : resolve()); server.closeAllConnections(); }),
   };
 }

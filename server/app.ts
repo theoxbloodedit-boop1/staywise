@@ -18,6 +18,7 @@ import { incidentsRouter } from './routes/incidents.js';
 import { inspectionsRouter } from './routes/inspections.js';
 import { guestRouter } from './routes/guest.js';
 import { adminRouter } from './routes/admin.js';
+import { createControlCenterRouter } from './routes/controlCenter.js';
 import { platformCrmRouter } from './routes/platformCrm.js';
 import { APP_SHELL_HTML, NOT_FOUND_HTML, ROUTE_HTML } from './generated-shell.js';
 
@@ -129,7 +130,7 @@ app.get('/api/health', (_req, res) => {
 app.use(
   '/api',
   ah(async (req, res, next) => {
-    if (req.path === '/health') return next();
+    if (req.path === '/health' || req.path === '/control-center' || req.path.startsWith('/control-center/')) return next();
     if (!isDatabaseConfigured()) {
       return res.status(503).json({
         error: 'Database is not configured. Set DATABASE_URL to your Neon PostgreSQL connection string.',
@@ -165,6 +166,7 @@ app.use('/api/incidents', incidentsRouter);
 app.use('/api/inspections', inspectionsRouter);
 app.use('/api/guest', guestRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/control-center', createControlCenterRouter(db));
 app.use('/api/platform-crm', platformCrmRouter);
 
 // Strict HTTP 404 for unknown API endpoints
@@ -205,6 +207,7 @@ export function isKnownSpaRoute(urlPath: string): boolean {
     '/app/feedback',
     '/app/audit-logs',
     '/app/crm-admin',
+    '/app/control-center',
   ];
   return knownAppPaths.includes(clean);
 }

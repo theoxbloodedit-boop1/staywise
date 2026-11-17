@@ -1,3 +1,4 @@
+import { controlPrincipal } from './lib/control-center.js';
 import { hasPropertyScope, isKnownOperationalRole, parseAssignments } from './lib/authorization.js';
 import crypto from 'crypto';
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
@@ -131,7 +132,7 @@ export async function resolveSessionActor(req: Request): Promise<ActorContext | 
   // Email alone never links an account. Only verified invitation acceptance may link.
   const user = await db.queryOne<any>('SELECT * FROM users WHERE neon_auth_id = $1', [neonUser.sub]);
 
-  if (!user) return null;
+  if (!user || (user.account_status && user.account_status !== 'Active') || (user.control_revoked_before && (neonUser.issuedAt || 0) <= Number(user.control_revoked_before))) return null;
 
   const requestedOrg =
     typeof req.headers['x-staywise-org'] === 'string' ? req.headers['x-staywise-org'].trim() : '';
@@ -158,8 +159,12 @@ export async function resolveSessionActor(req: Request): Promise<ActorContext | 
     [membership.organization_id]
   );
 
-  const isPlatformAdmin =
-    membership.role === 'Platform Super Admin' && neonUser.emailVerified && isPlatformAdminEmail(neonUser.email);
+  let isPlatformAdmin = false;
+  if (membership.role === 'Platform Super Admin') {
+    // Explicit internal grant only; email allowlists are not authorization.
+    try { isPlatformAdmin = (await controlPrincipal(db,req)).role === 'SUPER_ADMIN'; }
+    catch { isPlatformAdmin = false; }
+  }
 
   return {
     organizationId: membership.organization_id,
@@ -189,13 +194,20 @@ export const requireAuth: RequestHandler = ah(async (req, res, next) => {
   next();
 });
 
-export const requirePlatformAdmin: RequestHandler = (req, res, next) => {
+export const requirePlatformAdmin: RequestHandler = ah(async (req, res, next) => {
   const actor = getActor(req);
   if (!actor || !actor.isPlatformAdmin) {
     return res.status(403).json({ error: 'Platform Super Admin access required.' });
   }
+  if (!['GET','HEAD','OPTIONS'].includes(req.method)) {
+    try {
+      const principal = await controlPrincipal(db,req);
+      const age = Math.floor(Date.now()/1000) - (principal.authenticatedAt || 0);
+      if (age < 0 || age > 300) return res.status(403).json({ error: 'Recent provider reauthentication required for platform changes.' });
+    } catch { return res.status(403).json({ error: 'Internal authorization required.' }); }
+  }
   next();
-};
+});
 
 export function getActor(req: Request): ActorContext {
   return (req as any).actor as ActorContext;

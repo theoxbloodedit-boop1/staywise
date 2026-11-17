@@ -1,3 +1,4 @@
+import { controlPrincipal } from '../lib/control-center.js';
 import { acceptInvitation } from '../lib/invitations.js';
 import { parseAssignments, isKnownOperationalRole, AuthorizationError } from '../lib/authorization.js';
 import { Router } from 'express';
@@ -47,6 +48,8 @@ authRouter.get(
         neonAuthUrl,
       });
     }
+
+    if ((user.account_status && user.account_status !== 'Active') || (user.control_revoked_before && (neonUser.issuedAt || 0) <= Number(user.control_revoked_before))) return res.status(403).json({ error: 'Account suspended or session revoked. Sign in again or contact support.' });
 
     const membershipRows = await db.query<any>(
       `SELECT m.*, o.name as org_name, o.slug as org_slug, o.default_country, o.plan_tier, o.property_limit
@@ -112,7 +115,10 @@ authRouter.get(
     }));
 
     const assignedPropertyIds = parseAssignments(activeMembership.assigned_property_ids_json)!;
-    const isPlatformAdmin = activeMembership.role === 'Platform Super Admin' && neonUser.emailVerified && isPlatformAdminEmail(neonUser.email);
+    let isPlatformAdmin = false;
+    if (activeMembership.role === 'Platform Super Admin') {
+      try { isPlatformAdmin = (await controlPrincipal(db,req)).role === 'SUPER_ADMIN'; } catch { /* explicit grants fail closed */ }
+    }
 
     res.json({
       authenticated: true,
