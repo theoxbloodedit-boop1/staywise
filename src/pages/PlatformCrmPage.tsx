@@ -262,6 +262,7 @@ export function PlatformCrmPage({ currentOrgId }: { currentOrgId: string }) {
   if (loading && !data) {
     return (
       <div className="space-y-5">
+        <a href="/app/control-center" className="inline-flex min-h-[44px] items-center text-sm font-semibold text-teal-800 underline underline-offset-4">Open internal Control Center</a>
         <PageHeader
           title="SaaS Founder CRM & Platform Admin"
           description="Multi-tenant client CRM, workspace quotas, user directory, support escalations, and Neon DB telemetry."
@@ -299,6 +300,7 @@ export function PlatformCrmPage({ currentOrgId }: { currentOrgId: string }) {
 
   return (
     <div className="space-y-5">
+      <a href="/app/control-center" className="inline-flex min-h-[44px] items-center text-sm font-semibold text-teal-800 underline underline-offset-4">Open internal Control Center</a>
       <PageHeader
         title="SaaS Founder CRM & Platform Admin"
         description="Central back-office to manage client organizations, lifecycle stages, property/AI quotas, user accounts, and platform health."

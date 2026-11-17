@@ -1,3 +1,6 @@
+import { controlPrincipal } from '../lib/control-center.js';
+import { acceptInvitation } from '../lib/invitations.js';
+import { parseAssignments, isKnownOperationalRole, AuthorizationError } from '../lib/authorization.js';
 import { Router } from 'express';
 import { db } from '../db.js';
 import { ah, getActor, isPlatformAdminEmail, logAudit, nowIso, requireAuth, resolveNeonJwt, uid } from '../domain.js';
@@ -18,7 +21,7 @@ authRouter.get(
     const neonUser = await resolveNeonJwt(req);
     const neonAuthUrl = getNeonAuthBaseUrl();
 
-    if (!neonUser) {
+    if (!neonUser || !neonUser.emailVerified) {
       return res.json({
         authenticated: false,
         needsOnboarding: false,
@@ -31,14 +34,7 @@ authRouter.get(
       });
     }
 
-    let user = await db.queryOne<any>('SELECT * FROM users WHERE neon_auth_id = $1', [neonUser.sub]);
-    if (!user) {
-      const byEmail = await db.queryOne<any>('SELECT * FROM users WHERE LOWER(email) = LOWER($1)', [neonUser.email]);
-      if (byEmail && !byEmail.neon_auth_id) {
-        await db.execute('UPDATE users SET neon_auth_id = $1 WHERE id = $2', [neonUser.sub, byEmail.id]);
-        user = { ...byEmail, neon_auth_id: neonUser.sub };
-      }
-    }
+    const user = await db.queryOne<any>('SELECT * FROM users WHERE neon_auth_id = $1', [neonUser.sub]);
 
     if (!user) {
       return res.json({
@@ -53,7 +49,9 @@ authRouter.get(
       });
     }
 
-    const memberships = await db.query<any>(
+    if ((user.account_status && user.account_status !== 'Active') || (user.control_revoked_before && (neonUser.issuedAt || 0) <= Number(user.control_revoked_before))) return res.status(403).json({ error: 'Account suspended or session revoked. Sign in again or contact support.' });
+
+    const membershipRows = await db.query<any>(
       `SELECT m.*, o.name as org_name, o.slug as org_slug, o.default_country, o.plan_tier, o.property_limit
        FROM organization_memberships m
        JOIN organizations o ON o.id = m.organization_id
@@ -61,6 +59,8 @@ authRouter.get(
        ORDER BY o.created_at ASC`,
       [user.id]
     );
+
+    const memberships = membershipRows.filter(m => isKnownOperationalRole(m.role) && parseAssignments(m.assigned_property_ids_json) !== null);
 
     if (memberships.length === 0) {
       return res.json({
@@ -93,6 +93,8 @@ authRouter.get(
       property_limit: m.property_limit,
     }));
 
+    if (requestedOrgId && !memberships.some(m => m.organization_id === requestedOrgId)) return res.status(403).json({ error: 'Workspace access denied.' });
+
     const canSeeMemberEmails = ['Platform Super Admin', 'Organization Owner', 'Organization Admin', 'Property Manager'].includes(
       activeMembership.role
     );
@@ -112,15 +114,11 @@ authRouter.get(
       email: canSeeMemberEmails ? m.email : '',
     }));
 
-    let assignedPropertyIds: string[] = ['*'];
-    try {
-      assignedPropertyIds = JSON.parse(activeMembership.assigned_property_ids_json || '["*"]');
-    } catch {
-      assignedPropertyIds = ['*'];
+    const assignedPropertyIds = parseAssignments(activeMembership.assigned_property_ids_json)!;
+    let isPlatformAdmin = false;
+    if (activeMembership.role === 'Platform Super Admin') {
+      try { isPlatformAdmin = (await controlPrincipal(db,req)).role === 'SUPER_ADMIN'; } catch { /* explicit grants fail closed */ }
     }
-
-    const isPlatformAdmin =
-      activeMembership.role === 'Platform Super Admin' || isPlatformAdminEmail(user.email);
 
     res.json({
       authenticated: true,
@@ -144,12 +142,19 @@ authRouter.get(
   })
 );
 
+authRouter.post('/invitations/accept', authLimiter, ah(async (req, res) => {
+  const identity = await resolveNeonJwt(req);
+  if (!identity || !identity.emailVerified) return res.status(403).json({ error: 'Verified identity required.' });
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.json(await acceptInvitation(db, identity, req.body?.token));
+}));
+
 authRouter.post(
   '/onboard',
   authLimiter,
   ah(async (req, res) => {
     const neonUser = await resolveNeonJwt(req);
-    if (!neonUser) {
+    if (!neonUser || !neonUser.emailVerified) {
       return res.status(401).json({ error: 'Valid Neon Auth session required before creating a workspace.' });
     }
 
@@ -217,8 +222,8 @@ authRouter.post(
 
     await db.transaction(async (tx) => {
       const existingUser = await tx.queryOne<any>(
-        'SELECT * FROM users WHERE neon_auth_id = $1 OR LOWER(email) = LOWER($2)',
-        [neonUser.sub, neonUser.email]
+        'SELECT * FROM users WHERE neon_auth_id = $1',
+        [neonUser.sub]
       );
 
       if (existingUser) {
@@ -229,6 +234,8 @@ authRouter.post(
           userId,
         ]);
       } else {
+        const emailOwner = await tx.queryOne('SELECT id FROM users WHERE LOWER(email)=LOWER($1)', [neonUser.email]);
+        if (emailOwner) throw new AuthorizationError(403, 'INVITATION_ACCEPTANCE_REQUIRED');
         userId = uid('usr');
         await tx.execute(
           `INSERT INTO users (id, neon_auth_id, name, email, password_hash, avatar_initials, created_at)
@@ -333,7 +340,7 @@ authRouter.delete(
   authLimiter,
   ah(async (req, res) => {
     const neonUser = await resolveNeonJwt(req);
-    if (!neonUser) {
+    if (!neonUser || !neonUser.emailVerified) {
       return res.status(401).json({ error: 'Authentication required to delete account.' });
     }
     const { confirmEmail } = req.body || {};

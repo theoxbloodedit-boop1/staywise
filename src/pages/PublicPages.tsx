@@ -79,7 +79,7 @@ export function FeaturesPage({
         onEnterWorkspace={onEnterWorkspace}
         onOpenAuth={onOpenAuth}
       />
-      <main className="flex-1 py-12 sm:py-16 px-4 sm:px-6 max-w-7xl mx-auto w-full space-y-12">
+      <main id="main-content" className="flex-1 py-12 sm:py-16 px-4 sm:px-6 max-w-7xl mx-auto w-full space-y-12">
         <div className="max-w-2xl space-y-4">
           <Badge variant="brand">Platform Overview · 100% Free Full Access</Badge>
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900">
@@ -149,7 +149,7 @@ export function PricingPage({
         onEnterWorkspace={onEnterWorkspace}
         onOpenAuth={onOpenAuth}
       />
-      <main className="flex-1 py-12 sm:py-16 px-4 sm:px-6 max-w-6xl mx-auto w-full space-y-10">
+      <main id="main-content" className="flex-1 py-12 sm:py-16 px-4 sm:px-6 max-w-6xl mx-auto w-full space-y-10">
         <div className="max-w-2xl space-y-3">
           <Badge variant="brand">100% Free Full Access</Badge>
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900">
@@ -254,7 +254,7 @@ export function SecurityPage({
         onEnterWorkspace={onEnterWorkspace}
         onOpenAuth={onOpenAuth}
       />
-      <main className="flex-1 py-12 sm:py-16 px-4 sm:px-6 max-w-5xl mx-auto w-full space-y-10">
+      <main id="main-content" className="flex-1 py-12 sm:py-16 px-4 sm:px-6 max-w-5xl mx-auto w-full space-y-10">
         <div className="max-w-2xl space-y-3">
           <Badge variant="brand">Security & Data Protection</Badge>
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900">

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Menu, X, QrCode } from 'lucide-react';
 import { Button } from './ui';
 
@@ -14,6 +14,12 @@ export function PublicHeader({
   onOpenAuth: (mode: 'register' | 'login', defaultPlan?: string) => void;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') setMobileOpen(false); };
+    window.addEventListener('keydown', close);
+    return () => window.removeEventListener('keydown', close);
+  }, []);
 
   const navItems = [
     { label: 'Features', href: '/features' },
@@ -32,6 +38,7 @@ export function PublicHeader({
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200/80">
+      <a className="skip-link" href="#main-content">Skip to content</a>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
         <a
           href="/"
@@ -59,7 +66,7 @@ export function PublicHeader({
           </div>
         </a>
 
-        <nav aria-label="Primary navigation" className="hidden lg:flex items-center gap-5 text-[13px] font-medium text-slate-700">
+        <nav aria-label="Primary navigation" className="hidden xl:flex items-center gap-5 text-[13px] font-medium text-slate-700">
           {navItems.map((item) => {
             const active = currentPath === item.href;
             return (
@@ -89,7 +96,7 @@ export function PublicHeader({
           </Button>
         </div>
 
-        <div className="flex lg:hidden items-center gap-2">
+        <div className="flex xl:hidden items-center gap-2">
           <Button
             variant="primary"
             size="md"
@@ -102,6 +109,7 @@ export function PublicHeader({
             type="button"
             aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
             aria-expanded={mobileOpen}
+            aria-controls="mobile-navigation"
             onClick={() => setMobileOpen((v) => !v)}
             className="w-11 h-11 rounded-lg border border-slate-200 text-slate-800 hover:bg-slate-50 inline-flex items-center justify-center"
           >
@@ -111,7 +119,7 @@ export function PublicHeader({
       </div>
 
       {mobileOpen && (
-        <div className="lg:hidden border-t border-slate-200 bg-white px-4 py-4 space-y-2 shadow-lg">
+        <div id="mobile-navigation" className="xl:hidden border-t border-slate-200 bg-white px-4 py-4 space-y-2 shadow-lg">
           <nav aria-label="Mobile navigation" className="space-y-1">
             {navItems.map((item) => (
               <a
@@ -165,7 +173,7 @@ export function PublicFooter({
   onNavigatePath: (path: string) => void;
   onOpenAuth: (mode: 'register' | 'login', defaultPlan?: string) => void;
 }) {
-  const linkClass = 'inline-flex items-center min-h-[36px] text-slate-600 hover:text-slate-950';
+  const linkClass = 'inline-flex items-center min-h-[44px] text-slate-600 hover:text-slate-950';
 
   const navLink = (href: string, label: string) => (
     <a
@@ -182,14 +190,14 @@ export function PublicFooter({
 
   return (
     <footer className="border-t border-slate-200 py-12 bg-slate-50 text-slate-700">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 grid grid-cols-2 md:grid-cols-4 gap-8 text-xs">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 grid grid-cols-2 md:grid-cols-4 gap-8 text-sm">
         <div className="col-span-2 md:col-span-1 space-y-2.5">
           <div className="flex items-center gap-2 font-bold text-sm text-slate-900">
             <QrCode className="w-4 h-4 text-teal-700" />
             Staywise
           </div>
           <p className="text-slate-600 leading-relaxed">
-            Mobile guest welcome books, rate-limited door & Wi-Fi access vaults, and turnover coordination—100% free during Early Access.
+            Guest welcome books and property operations, together in one workspace. Free during Early Access.
           </p>
           <p className="text-slate-600">Staywise Software LLC · Austin, TX</p>
         </div>
@@ -211,7 +219,7 @@ export function PublicFooter({
             <li>{navLink('/security', 'Security Architecture')}</li>
             <li>
               <a href="/guest/barton-creek-modern?code=STAY-4821" target="_blank" rel="noreferrer" className={linkClass}>
-                Unlocked Guest Demo
+                Sample Guest Demo
               </a>
             </li>
             <li>

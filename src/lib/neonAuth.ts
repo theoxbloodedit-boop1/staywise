@@ -8,7 +8,7 @@ const buildNeonClient = (url: string) =>
 
 type InternalNeonAuthInstance = ReturnType<typeof buildNeonClient>;
 
-let runtimeAuthUrl: string = (import.meta.env.VITE_NEON_AUTH_URL || '').trim().replace(/\/+$/, '');
+let runtimeAuthUrl: string = (import.meta.env?.VITE_NEON_AUTH_URL || '').trim().replace(/\/+$/, '');
 let authInstance: InternalNeonAuthInstance | null = null;
 
 export function configureNeonAuthUrl(url?: string | null) {

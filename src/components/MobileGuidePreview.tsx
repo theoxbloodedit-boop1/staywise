@@ -6,10 +6,12 @@ export function MobileGuidePreview({
   property,
   guidebook,
   sections,
+  compact = false,
 }: {
-  property: Property;
-  guidebook: Guidebook;
-  sections: GuidebookSection[];
+  compact?: boolean;
+  property: Pick<Property, 'cover_image' | 'name' | 'country' | 'city' | 'state' | 'bedrooms' | 'bathrooms'>;
+  guidebook: Pick<Guidebook, 'accent_color' | 'typography_style' | 'cover_image' | 'brand_name'>;
+  sections: Pick<GuidebookSection, 'section_key' | 'title' | 'is_visible' | 'content'>[];
 }) {
   const visibleSections = sections.filter((s) => s.is_visible);
   const [activeKey, setActiveKey] = useState<string>(visibleSections[0]?.section_key || 'welcome');
@@ -48,8 +50,8 @@ export function MobileGuidePreview({
         : 'font-sans';
 
   return (
-    <div className="w-[330px] mx-auto bg-slate-900 rounded-[36px] p-2.5 shadow-xl border border-slate-800">
-      <div className={`bg-white rounded-[28px] overflow-hidden h-[610px] flex flex-col ${fontClass}`}>
+    <div className="w-full max-w-[330px] mx-auto bg-slate-900 rounded-[36px] p-2.5 shadow-xl border border-slate-800">
+      <div className={`bg-white rounded-[28px] overflow-hidden ${compact ? 'h-[440px]' : 'h-[610px]'} flex flex-col ${fontClass}`}>
         {/* Top cover */}
         <div className="relative h-36 shrink-0 bg-slate-800">
           <img
@@ -77,9 +79,10 @@ export function MobileGuidePreview({
             return (
               <button
                 key={sec.section_key}
+                aria-pressed={active}
                 onClick={() => setActiveKey(sec.section_key)}
                 style={active ? { backgroundColor: accent, borderColor: accent } : undefined}
-                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border whitespace-nowrap transition-colors ${
+                className={`inline-flex items-center gap-1 px-2.5 min-h-[44px] rounded-full text-[11px] font-medium border whitespace-nowrap transition-colors ${
                   active ? 'text-white' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
                 }`}
               >

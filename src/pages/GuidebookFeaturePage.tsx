@@ -44,7 +44,7 @@ export function GuidebookFeaturePage({
         onOpenAuth={onOpenAuth}
       />
 
-      <main className="flex-1 py-12 sm:py-16 px-4 sm:px-6 max-w-7xl mx-auto w-full space-y-14">
+      <main id="main-content" className="flex-1 py-12 sm:py-16 px-4 sm:px-6 max-w-7xl mx-auto w-full space-y-14">
         <div className="grid lg:grid-cols-12 gap-10 items-center">
           <div className="lg:col-span-6 space-y-5">
             <Badge variant="brand">Mobile Welcome Books · Free Full Access</Badge>

@@ -26,6 +26,7 @@ import {
 import { Button, Badge, Card } from '../components/ui';
 import { PublicHeader, PublicFooter } from '../components/PublicChrome';
 import { PLAN_LIST } from '../lib/plans';
+import { GuestProductPreview, OperationsProductPreview } from '../components/ProductPreview';
 import { HOME_FAQS } from '../seo/Seo';
 
 type ShowcaseRegion = 'US' | 'EU' | 'GB' | 'APAC';
@@ -148,7 +149,7 @@ export function LandingPage({
   };
 
   return (
-    <div className="min-h-screen bg-white text-slate-900">
+    <div className="marketing-page min-h-screen bg-white text-slate-900">
       <PublicHeader
         currentPath="/"
         onNavigatePath={onNavigatePath}
@@ -156,88 +157,28 @@ export function LandingPage({
         onOpenAuth={onOpenAuth}
       />
 
-      <main>
+      <main id="main-content">
         {/* Editorial Photographic Hero + Floating Interactive Guest Portal Launcher */}
         <section className="pt-4 sm:pt-6 pb-12 px-4 sm:px-6 max-w-7xl mx-auto">
-          <div className="relative rounded-3xl overflow-hidden bg-slate-900 shadow-[0_20px_50px_-20px_rgba(15,23,42,0.35)]">
-            <picture>
-              <source
-                type="image/avif"
-                srcSet="/images/barton-creek-640.avif 640w, /images/barton-creek-1280.avif 1280w"
-                sizes="(max-width: 768px) 100vw, 1280px"
-              />
-              <source
-                type="image/webp"
-                srcSet="/images/barton-creek-640.webp 640w, /images/barton-creek-1280.webp 1280w"
-                sizes="(max-width: 768px) 100vw, 1280px"
-              />
-              <img
-                src="/images/barton-creek.jpg"
-                alt="Sunlit architectural vacation rental home managed with Staywise"
-                width={1280}
-                height={853}
-                {...({ fetchpriority: 'high' } as any)}
-                className="absolute inset-0 w-full h-full object-cover object-center"
-              />
-            </picture>
-            <div className="absolute inset-0 bg-gradient-to-r from-slate-950/92 via-slate-950/70 to-slate-900/30" />
-
-            <div className="relative z-10 px-6 py-12 sm:px-12 sm:py-16 lg:py-20 pb-24 sm:pb-28">
-              <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md border border-white/25 text-xs font-medium text-white">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                  100% Free Full Access · No card required
-                </div>
-
-                <a
-                  href="/guest/barton-creek-modern?code=STAY-4821"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="hidden sm:inline-flex items-center gap-3 px-3.5 py-1.5 rounded-full bg-white/95 hover:bg-white text-slate-900 shadow-sm transition-colors"
-                >
-                  <span className="w-6 h-6 rounded-full bg-teal-700 text-white flex items-center justify-center">
-                    <Lock className="w-3.5 h-3.5" />
-                  </span>
-                  <div className="text-[11px] leading-tight">
-                    <div className="font-semibold text-slate-900">3 interactive sample properties</div>
-                    <div className="text-slate-600">AES-256 stay-code lock vault · Try live demo →</div>
-                  </div>
-                </a>
+          <div className="grid lg:grid-cols-2 items-center gap-8 lg:gap-12 py-8 sm:py-12">
+            <div className="min-w-0 space-y-6">
+              <div className="inline-flex items-center gap-2 rounded-full border border-teal-200 bg-teal-50 px-3 py-1.5 text-xs font-semibold text-teal-900"><span className="h-1.5 w-1.5 rounded-full bg-brand-600" />Built for hospitality operations</div>
+              <h1 className="text-[38px] sm:text-5xl xl:text-[58px] font-semibold tracking-[-0.045em] text-brand-navy leading-[1.08]">A better guest arrival.<br /><span className="text-brand-600">A clearer turnover day.</span></h1>
+              <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-lg">Welcome books for your guests. Cleaning, inspections and incidents for your team. One workspace to see the details that need attention.</p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button size="lg" variant="secondary" onClick={() => onOpenAuth('register','Starter')}>Create Free Workspace <ArrowRight className="w-4 h-4" /></Button>
+                <a href="#product-preview" className="inline-flex min-h-[48px] items-center justify-center gap-2 px-5 rounded-md border border-slate-300 font-medium text-sm hover:bg-slate-50">Explore the product <ArrowRight className="w-4 h-4" /></a>
               </div>
-
-              <div className="max-w-2xl space-y-5">
-                <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-white leading-[1.08]">
-                  Your guests know the Wi-Fi before they park. Your team knows every home is ready.
-                </h1>
-                <p className="text-base sm:text-lg text-slate-100 leading-relaxed max-w-xl">
-                  Stop answering late-night lockbox texts or guessing whether a turnover actually got done. Staywise puts mobile welcome books, stay-gated door codes, and photo-verified checklists in one calm workspace.
-                </p>
-                <div className="flex flex-wrap items-center gap-3 pt-1">
-                  <Button
-                    size="lg"
-                    variant="secondary"
-                    className="shadow-sm min-h-[44px]"
-                    onClick={() => onOpenAuth('register', 'Starter')}
-                  >
-                    Create Free Workspace
-                    <ArrowRight className="w-4 h-4" />
-                  </Button>
-                  <button
-                    type="button"
-                    onClick={onEnterWorkspace}
-                    className="inline-flex items-center gap-2 min-h-[44px] px-4 text-sm font-medium rounded-md bg-white/15 hover:bg-white/25 text-white border border-white/30 backdrop-blur-sm transition-colors"
-                  >
-                    Open Operations Workspace
-                  </button>
-                </div>
-              </div>
+              <p className="text-xs text-slate-600">$0 during Early Access · No credit card required</p>
+              <button type="button" onClick={onEnterWorkspace} className="min-h-[44px] text-sm text-slate-700 underline underline-offset-4">Already on the team? Open your workspace</button>
             </div>
+            <GuestProductPreview />
           </div>
 
           {/* Floating Live Guest Portal Launcher Bar */}
           <form
             onSubmit={handleOpenPreview}
-            className="relative z-20 -mt-12 sm:-mt-14 mx-2 sm:mx-8 bg-white rounded-2xl border border-slate-200 shadow-[0_14px_40px_-14px_rgba(15,23,42,0.18)] p-3 sm:p-4"
+            className="relative z-20 mt-4 bg-white rounded-2xl border border-slate-200 shadow-[0_14px_40px_-14px_rgba(15,23,42,0.18)] p-3 sm:p-4"
           >
             <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
               <div className="md:col-span-5 flex items-center gap-3 px-2 py-1 rounded-xl hover:bg-slate-50 transition-colors">
@@ -246,7 +187,7 @@ export function LandingPage({
                 </div>
                 <div className="min-w-0 flex-1">
                   <label htmlFor="hero-prop-select" className="block text-[11px] font-medium text-slate-600">
-                    Live Property Welcome Book
+                    Sample property welcome book
                   </label>
                   <select
                     id="hero-prop-select"
@@ -269,7 +210,7 @@ export function LandingPage({
                 </div>
                 <div className="min-w-0 flex-1">
                   <label htmlFor="hero-code-input" className="block text-[11px] font-medium text-slate-600">
-                    Sample Stay Code (unlocks PIN & Wi-Fi)
+                    Public demo code · sample stay only
                   </label>
                   <input
                     id="hero-code-input"
@@ -294,49 +235,18 @@ export function LandingPage({
           </form>
         </section>
 
-        {/* 4-Card Trust & Value Strip */}
-        <section id="features" className="py-8 max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              {
-                icon: Smartphone,
-                accent: 'bg-teal-50 text-teal-800',
-                title: 'No App to Download',
-                desc: 'Guests scan a nightstand QR card or tap a link straight in Safari or Chrome.',
-              },
-              {
-                icon: Lock,
-                accent: 'bg-slate-100 text-slate-800',
-                title: 'Protected Door & Wi-Fi',
-                desc: 'Smart-lock PINs stay encrypted and hidden until a guest verifies an active stay code.',
-              },
-              {
-                icon: Camera,
-                accent: 'bg-emerald-50 text-emerald-800',
-                title: 'Photo-Verified Turnovers',
-                desc: 'Cleaners submit room-by-room check photos before managers mark a home ready.',
-              },
-              {
-                icon: Globe,
-                accent: 'bg-amber-50 text-amber-800',
-                title: 'Regional Standards Built In',
-                desc: 'Configure currency, °F or °C, date formats, and local emergency numbers per home.',
-              },
-            ].map((item) => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={item.title}
-                  className="p-5 rounded-2xl bg-slate-50/80 border border-slate-200/90 hover:border-slate-300 transition-colors"
-                >
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3.5 ${item.accent}`}>
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <h2 className="text-sm font-semibold text-slate-900">{item.title}</h2>
-                  <p className="text-[13px] text-slate-600 mt-1.5 leading-relaxed">{item.desc}</p>
-                </div>
-              );
-            })}
+        <section id="features" className="py-12 border-y border-slate-200 bg-brand-cloud">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 grid lg:grid-cols-[1fr_2fr] gap-8 lg:gap-16">
+            <div><p className="text-xs uppercase tracking-widest font-semibold text-teal-800">One connected workspace</p><h2 className="text-2xl sm:text-3xl font-semibold mt-3">From guest questions<br className="hidden sm:block" /> to the next turnover.</h2><p className="text-sm text-slate-600 mt-4">Explore the tools already in Staywise. Keep the guest experience and the work behind it in view.</p></div>
+            <div className="grid sm:grid-cols-2 gap-x-8">{[
+              {icon:BookOpen,title:'Guest experience',text:'Mobile welcome books, arrival notes and local picks.',path:'/guest-guidebook'},
+              {icon:Sparkles,title:'Turnover management',text:'Assigned cleaning tasks and recorded progress.',path:'/turnover-management'},
+              {icon:Camera,title:'Inspections & evidence',text:'Inspection records and supporting photos.',path:'/features'},
+              {icon:Wrench,title:'Maintenance & incidents',text:'Reported issues and work-order follow-up.',path:'/features'},
+              {icon:Users,title:'Team coordination',text:'Property assignments and role-scoped views.',path:'/features'},
+              {icon:Building2,title:'Property operations',text:'Recorded checks and status, with context.',path:'/turnover-management'},
+              {icon:ShieldCheck,title:'Security & access',text:'Read the architecture and access-control documentation.',path:'/security'},
+            ].map(({icon:Icon,title,text,path})=><a key={title} href={path} onClick={event=>{event.preventDefault();onNavigatePath(path);}} className="group flex gap-3 py-5 border-b border-slate-200 min-w-0"><Icon aria-hidden="true" className="w-5 h-5 text-teal-800 shrink-0 mt-1" /><div><h3 className="text-sm font-semibold group-hover:text-teal-800 flex gap-2 items-center">{title}<ArrowRight aria-hidden="true" className="w-3.5 h-3.5" /></h3><p className="text-sm text-slate-600 mt-1">{text}</p></div></a>)}</div>
           </div>
         </section>
 
@@ -351,14 +261,14 @@ export function LandingPage({
                 Fewer late-night messages. Fewer Sunday surprises.
               </h2>
               <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
-                Most rental software stops at the booking calendar. The real work happens between checkout at 11 AM and the next family pulling into the driveway at 4 PM.
+                The work between checkout and the next arrival needs its own workspace. Bring property instructions, assigned tasks and reported issues into view.
               </p>
               <ul className="space-y-3 text-sm text-slate-700 pt-1">
                 {[
                   'One mobile welcome book with parking, Wi-Fi, appliances, and local picks',
-                  'A guest assistant grounded only in facts you approved—and honest when unsure',
-                  'Cleaners, inspectors, and maintenance techs working from one live schedule',
-                  'Clear audit trails: every reported issue becomes a tracked work order',
+                  'A guest assistant that uses your guidebook content',
+                  'Property-scoped cleaning, inspection and incident views',
+                  'Recorded activity and work orders for follow-up',
                 ].map((line) => (
                   <li key={line} className="flex items-start gap-2.5">
                     <span className="w-5 h-5 rounded-full bg-teal-50 text-teal-800 flex items-center justify-center shrink-0 mt-0.5">
@@ -379,46 +289,7 @@ export function LandingPage({
               </div>
             </div>
 
-            <div className="lg:col-span-7">
-              <div className="relative rounded-3xl overflow-hidden border border-slate-200 shadow-sm">
-                <picture>
-                  <source
-                    type="image/avif"
-                    srcSet="/images/timberline-interior-640.avif 640w, /images/timberline-interior-1280.avif 1280w"
-                    sizes="(max-width: 1024px) 100vw, 720px"
-                  />
-                  <source
-                    type="image/webp"
-                    srcSet="/images/timberline-interior-640.webp 640w, /images/timberline-interior-1280.webp 1280w"
-                    sizes="(max-width: 1024px) 100vw, 720px"
-                  />
-                  <img
-                    src="/images/timberline-interior.jpg"
-                    alt="Warm timber living room prepared for arriving guests"
-                    loading="lazy"
-                    width={1280}
-                    height={853}
-                    className="w-full h-[360px] sm:h-[420px] object-cover"
-                  />
-                </picture>
-                <div className="absolute bottom-4 left-4 right-4 sm:right-auto sm:max-w-sm bg-white/95 backdrop-blur-md rounded-2xl p-3.5 border border-slate-200/80 shadow-lg flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-                      <CheckCircle2 className="w-5 h-5" />
-                    </span>
-                    <div className="min-w-0">
-                      <div className="text-xs font-semibold text-slate-900 truncate">
-                        Sample Turnover Workflow · 5/5 checks passed
-                      </div>
-                      <div className="text-[11px] text-slate-600">
-                        Photo evidence attached · Supervisor sign-off
-                      </div>
-                    </div>
-                  </div>
-                  <Badge variant="success">Ready</Badge>
-                </div>
-              </div>
-            </div>
+            <div id="product-preview" className="lg:col-span-7 scroll-mt-24"><OperationsProductPreview /></div>
           </div>
         </section>
 
@@ -431,7 +302,7 @@ export function LandingPage({
                   Interactive Guest Experience
                 </div>
                 <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
-                  See what your guests actually open
+                  A welcome book guests can explore
                 </h2>
               </div>
               <a
@@ -440,7 +311,7 @@ export function LandingPage({
                 rel="noreferrer"
                 className="text-xs font-semibold text-teal-800 hover:text-teal-950 inline-flex items-center gap-1 min-h-[36px]"
               >
-                Open unlocked demo stay <ArrowRight className="w-3.5 h-3.5" />
+                Open sample guest stay <ArrowRight className="w-3.5 h-3.5" />
               </a>
             </div>
 
@@ -473,10 +344,10 @@ export function LandingPage({
                         />
                       </picture>
                       <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-white/95 backdrop-blur-sm text-[11px] font-semibold text-slate-900 shadow-xs">
-                        {prop.tag}
+                        Sample · {prop.tag}
                       </span>
                       <span className="absolute bottom-3 right-3 px-2.5 py-1 rounded-md bg-slate-900/90 backdrop-blur-sm text-[11px] font-mono text-white">
-                        Code: {prop.code}
+                        Demo: {prop.code}
                       </span>
                     </div>
                     <div className="p-5">
@@ -486,7 +357,7 @@ export function LandingPage({
                         {prop.location}
                       </div>
                       <p className="text-[13px] text-slate-600 mt-2.5 leading-relaxed">{prop.summary}</p>
-                      <div className="flex items-center gap-4 text-xs text-slate-600 mt-4 pt-3 border-t border-slate-100">
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600 mt-4 pt-3 border-t border-slate-100">
                         <span className="inline-flex items-center gap-1">
                           <BedDouble className="w-3.5 h-3.5" /> {prop.beds} Beds
                         </span>
@@ -506,7 +377,7 @@ export function LandingPage({
                       rel="noreferrer"
                       className="w-full min-h-[44px] rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors"
                     >
-                      Open Welcome Book
+                      Open Sample Welcome Book
                       <ExternalLink className="w-3.5 h-3.5" />
                     </a>
                   </div>
@@ -524,20 +395,20 @@ export function LandingPage({
               A home isn’t ready just because a text said “all clean.”
             </h2>
             <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
-              Staywise holds each property to three concrete checks before flipping its status to Ready. If an AC issue is open or an inspection hasn’t happened yet, your entire team sees why right on the board.
+              Review cleaning, inspection and incident records in one place. Operational status is not a safety certification; final readiness validation is still being strengthened.
             </p>
             <div className="space-y-2.5 text-[13px] text-slate-700 pt-1">
               <div className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200/80">
                 <Sparkles className="w-4 h-4 text-teal-800 shrink-0" />
-                <span><strong>Cleaning approved:</strong> checklist completed with photo proof and supervisor sign-off.</span>
+                <span><strong>Cleaning review:</strong> review the recorded checklist and supporting photos.</span>
               </div>
               <div className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200/80">
                 <ShieldCheck className="w-4 h-4 text-teal-800 shrink-0" />
-                <span><strong>Inspection passed:</strong> pre-arrival room & inventory walk shows no missing or damaged items.</span>
+                <span><strong>Inspection records:</strong> inspect recorded room and inventory results.</span>
               </div>
               <div className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200/80">
                 <Wrench className="w-4 h-4 text-teal-800 shrink-0" />
-                <span><strong>Zero critical blockers:</strong> no unresolved safety, plumbing, lock, or HVAC emergencies open.</span>
+                <span><strong>Incident visibility:</strong> review unresolved issues before an arrival.</span>
               </div>
             </div>
           </div>
@@ -597,7 +468,7 @@ export function LandingPage({
                 How It Works
               </div>
               <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
-                Live with your first property in ten minutes
+                Build your first guest experience
               </h2>
             </div>
 
@@ -613,13 +484,13 @@ export function LandingPage({
                   step: '02',
                   icon: QrCode,
                   title: 'Share one QR or stay link',
-                  desc: 'Send guests a booking-specific link or print a framed QR card. Codes unlock automatically for active stays.',
+                  desc: 'Send guests a booking-specific link or print a framed QR card. Guests verify their stay in the guest portal.',
                 },
                 {
                   step: '03',
                   icon: MessageSquare,
                   title: 'Run turnovers & fixes together',
-                  desc: 'Assign cleaners, review photo proofs, handle guest escalations, and track repairs in one shared workspace.',
+                  desc: 'Assign cleaners, review submitted photos, handle guest escalations, and track repairs in one shared workspace.',
                 },
               ].map((s) => {
                 const Icon = s.icon;
@@ -692,13 +563,13 @@ export function LandingPage({
           <div className="rounded-2xl border border-slate-200 bg-white p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-teal-800">
-                <ShieldCheck className="w-4 h-4" /> Security & Architecture Built In
+                <ShieldCheck className="w-4 h-4" /> Security & data controls
               </div>
               <h3 className="text-base font-bold text-slate-900">
-                Door PINs encrypted with AES-256-GCM · Rate-limited stay verification · Full JSON export
+                Understand the controls behind your workspace
               </h3>
               <p className="text-xs text-slate-600">
-                Strict organization isolation in PostgreSQL, EdDSA/JWKS session verification, and one-click account erasure.
+                Review the documented architecture, access controls and data export options.
               </p>
             </div>
             <Button variant="outline" size="md" className="shrink-0 min-h-[44px]" onClick={() => onNavigatePath('/security')}>
@@ -712,9 +583,9 @@ export function LandingPage({
         <section id="pricing" className="py-14 sm:py-16 bg-slate-50/60 border-t border-slate-200/80">
           <div className="max-w-7xl mx-auto px-4 sm:px-6">
             <div className="text-center max-w-2xl mx-auto mb-10">
-              <Badge variant="brand">100% Free Full Access</Badge>
+              <Badge variant="brand">Free during Early Access</Badge>
               <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 mt-3">
-                Every feature unlocked — completely free during Early Access
+                Your portfolio size. One clear starting point.
               </h2>
               <p className="text-sm text-slate-600 mt-2">
                 No credit card required, no paywalled modules, and zero hidden charges. Pick the property capacity tier that fits your portfolio today.
@@ -734,14 +605,14 @@ export function LandingPage({
                     <div>
                       <div className="flex items-center justify-between">
                         <h3 className="text-base font-bold text-slate-900">{plan.label}</h3>
-                        {plan.badge && <Badge variant="brand">{plan.badge}</Badge>}
+                        {highlight && <Badge variant="brand">For growing teams</Badge>}
                       </div>
                       <div className="mt-3 flex items-baseline gap-2">
                         <span className="text-3xl font-bold tabular-nums text-slate-900">$0</span>
-                        <span className="text-xs font-medium text-teal-800">/ month · All features unlocked</span>
+                        <span className="text-xs font-medium text-teal-800">during Early Access</span>
                       </div>
                       <div className="text-xs font-medium text-slate-700 mt-1">
-                        Up to {plan.propertyLimit} properties · {plan.aiMonthlyAllowance.toLocaleString()} AI answers/mo
+                        Up to {plan.propertyLimit} properties · {plan.aiMonthlyAllowance.toLocaleString()} AI answers / month
                       </div>
                       <p className="text-[13px] text-slate-600 mt-3">{plan.summary}</p>
 
@@ -780,6 +651,8 @@ export function LandingPage({
                     <div key={item.q} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
                       <button
                         type="button"
+                        id={`faq-question-${idx}`}
+                        aria-controls={`faq-answer-${idx}`}
                         aria-expanded={open}
                         onClick={() => setOpenFaq(open ? null : idx)}
                         className="w-full px-5 py-4 text-left flex items-center justify-between gap-4 min-h-[52px]"
@@ -792,7 +665,7 @@ export function LandingPage({
                         />
                       </button>
                       {open && (
-                        <div className="px-5 pb-4 text-[13px] text-slate-600 leading-relaxed border-t border-slate-100 pt-3">
+                        <div id={`faq-answer-${idx}`} role="region" aria-labelledby={`faq-question-${idx}`} className="px-5 pb-4 text-[13px] text-slate-600 leading-relaxed border-t border-slate-100 pt-3">
                           {item.a}
                         </div>
                       )}
@@ -820,7 +693,7 @@ export function LandingPage({
               />
               <img
                 src="/images/vista-chino.jpg"
-                alt="Evening pool terrace at a Staywise-managed home"
+                alt="Pool terrace at a sample property"
                 loading="lazy"
                 width={1280}
                 height={853}

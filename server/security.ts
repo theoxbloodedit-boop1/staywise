@@ -1,85 +1,19 @@
 import crypto from 'crypto';
-import fs from 'fs';
-import path from 'path';
+import { createFieldEncryption } from './lib/field-encryption.js';
 import type { NextFunction, Request, Response } from 'express';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 
-const DATA_DIR = path.resolve(process.cwd(), 'data');
-const SECRETS_FILE = path.join(DATA_DIR, '.server-secrets.json');
-
-let cachedDataKeyHex: string | null = null;
-
-function resolveDataKeyHex(): string {
-  if (cachedDataKeyHex) return cachedDataKeyHex;
-
-  const envKey = process.env.STAYWISE_DATA_KEY || process.env.ENCRYPTION_KEY;
-  if (envKey && /^[0-9a-fA-F]{64}$/.test(envKey.trim())) {
-    cachedDataKeyHex = envKey.trim();
-    return cachedDataKeyHex;
-  }
-
-  // Fallback derived key if user provided a passphrase/cookie secret
-  const fallbackSecret = process.env.NEON_AUTH_COOKIE_SECRET || process.env.SESSION_SECRET;
-  if (fallbackSecret && fallbackSecret.length >= 16) {
-    cachedDataKeyHex = crypto.createHash('sha256').update(`staywise-aes:${fallbackSecret}`).digest('hex');
-    return cachedDataKeyHex;
-  }
-
-  // Local non-serverless fallback only (avoid writing to read-only Vercel filesystem)
-  if (!process.env.VERCEL) {
-    try {
-      if (!fs.existsSync(DATA_DIR)) {
-        fs.mkdirSync(DATA_DIR, { recursive: true });
-      }
-      if (fs.existsSync(SECRETS_FILE)) {
-        const parsed = JSON.parse(fs.readFileSync(SECRETS_FILE, 'utf8'));
-        if (parsed.dataKeyHex && /^[0-9a-fA-F]{64}$/.test(parsed.dataKeyHex)) {
-          cachedDataKeyHex = parsed.dataKeyHex;
-          return cachedDataKeyHex!;
-        }
-      }
-      const generated = crypto.randomBytes(32).toString('hex');
-      fs.writeFileSync(SECRETS_FILE, JSON.stringify({ dataKeyHex: generated }, null, 2), { mode: 0o600 });
-      cachedDataKeyHex = generated;
-      return generated;
-    } catch {
-      // Fall through if filesystem is read-only
-    }
-  }
-
-  // Ephemeral fallback warning — production Vercel deployments should set STAYWISE_DATA_KEY
-  console.warn('[STAYWISE SECURITY] STAYWISE_DATA_KEY is not set. Configure a 64-char hex key in environment variables.');
-  cachedDataKeyHex = crypto.createHash('sha256').update('staywise-unconfigured-dev-key').digest('hex');
-  return cachedDataKeyHex;
+// Configuration is validated on every sensitive operation; no process-local fallback key.
+export function validateFieldEncryptionConfiguration(): void {
+  createFieldEncryption(process.env);
 }
 
 export function encryptField(plain: string | null | undefined): string {
-  if (!plain) return '';
-  if (plain.startsWith('enc:v1:')) return plain;
-  const key = Buffer.from(resolveDataKeyHex(), 'hex');
-  const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
-  const encrypted = Buffer.concat([cipher.update(plain, 'utf8'), cipher.final()]);
-  const tag = cipher.getAuthTag();
-  return `enc:v1:${iv.toString('base64url')}:${tag.toString('base64url')}:${encrypted.toString('base64url')}`;
+  return createFieldEncryption(process.env).encrypt(plain);
 }
 
 export function decryptField(value: string | null | undefined): string {
-  if (!value) return '';
-  if (!value.startsWith('enc:v1:')) return value;
-  try {
-    const [, , ivB64, tagB64, dataB64] = value.split(':');
-    const key = Buffer.from(resolveDataKeyHex(), 'hex');
-    const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(ivB64, 'base64url'));
-    decipher.setAuthTag(Buffer.from(tagB64, 'base64url'));
-    const dec = Buffer.concat([
-      decipher.update(Buffer.from(dataB64, 'base64url')),
-      decipher.final(),
-    ]);
-    return dec.toString('utf8');
-  } catch {
-    return '';
-  }
+  return createFieldEncryption(process.env).decrypt(value);
 }
 
 export function getNeonAuthBaseUrl(): string | null {
@@ -111,6 +45,9 @@ export interface VerifiedNeonUser {
   email: string;
   name: string;
   emailVerified: boolean;
+  authenticationTime?: number;
+  issuedAt?: number;
+  expiresAt?: number;
 }
 
 export async function verifyNeonAuthJwt(token: string | undefined): Promise<VerifiedNeonUser | null> {
@@ -119,9 +56,14 @@ export async function verifyNeonAuthJwt(token: string | undefined): Promise<Veri
   if (!jwks) return null;
 
   const baseUrl = getNeonAuthBaseUrl();
+  const audience = process.env.NEON_AUTH_AUDIENCE?.trim();
+  if (!baseUrl || !audience) return null;
   try {
     const { payload } = await jwtVerify(token, jwks, {
-      ...(baseUrl ? { issuer: [baseUrl, new URL(baseUrl).origin] } : {}),
+      issuer: baseUrl,
+      audience,
+      algorithms: ['RS256', 'ES256', 'EdDSA'],
+      requiredClaims: ['sub', 'email', 'exp', 'iat'],
     });
 
     const sub = typeof payload.sub === 'string' ? payload.sub : '';
@@ -130,10 +72,10 @@ export async function verifyNeonAuthJwt(token: string | undefined): Promise<Veri
       typeof payload.name === 'string' && payload.name.trim()
         ? payload.name.trim()
         : email.split('@')[0] || 'Operator';
-    const emailVerified = Boolean(payload.email_verified);
+    const emailVerified = payload.email_verified === true;
 
     if (!sub || !email) return null;
-    return { sub, email, name, emailVerified };
+    return { sub, email, name, emailVerified, authenticationTime: typeof payload.auth_time === 'number' ? payload.auth_time : undefined, issuedAt: payload.iat, expiresAt: payload.exp };
   } catch {
     return null;
   }

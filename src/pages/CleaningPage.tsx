@@ -1,3 +1,4 @@
+import { PrivateEvidenceImage } from '../components/PrivateEvidenceImage';
 import React, { useEffect, useState } from 'react';
 import {
   Plus,
@@ -97,7 +98,7 @@ export function CleaningPage({
     const reader = new FileReader();
     reader.onload = async () => {
       const dataUrl = reader.result as string;
-      const uploadedUrl = await uploadEvidencePhoto(dataUrl, 'cleaning');
+      const uploadedUrl = await uploadEvidencePhoto(dataUrl, 'cleaning', undefined, task.property_id);
       await patchTask(task, { photo_urls: [...task.photo_urls, uploadedUrl] });
     };
     reader.readAsDataURL(file);
@@ -261,9 +262,9 @@ export function CleaningPage({
                 ) : (
                   <div className="grid grid-cols-3 gap-2">
                     {selectedTask.photo_urls.map((url, idx) => (
-                      <img
+                      <PrivateEvidenceImage
                         key={idx}
-                        src={url}
+                        mediaId={url}
                         alt={`${selectedTask.property_name} turnover cleaning photo ${idx + 1}`}
                         loading="lazy"
                         className="h-20 w-full object-cover rounded border border-slate-200"

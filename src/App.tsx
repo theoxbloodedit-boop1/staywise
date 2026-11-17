@@ -9,6 +9,7 @@ import { KNOWN_APP_SUBROUTES, renderFallbackNotFound, renderPublicPage } from '.
 import type { OrgMember, Organization, SessionContext, UserRole } from './lib/types';
 
 // Lazy-loaded Workspace, Guest Portal, Print PDF & Auth chunks (Public marketing pages render synchronously for clean SSR hydration)
+const ControlCenterPage = lazy(() => import('./pages/ControlCenterPage').then(m => ({ default: m.ControlCenterPage })));
 const AuthPage = lazy(() => import('./pages/AuthPage').then((m) => ({ default: m.AuthPage })));
 const GuestPortalPage = lazy(() => import('./pages/GuestPortalPage').then((m) => ({ default: m.GuestPortalPage })));
 const PrintableGuidePage = lazy(() => import('./pages/PrintableGuidePage').then((m) => ({ default: m.PrintableGuidePage })));
@@ -157,10 +158,10 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (pathname.startsWith('/app')) {
+    if (pathname.startsWith('/app') && pathname !== '/app/control-center') {
       hydrateFromBackend();
     }
-  }, [pathname.startsWith('/app')]);
+  }, [pathname.startsWith('/app'), pathname === '/app/control-center']);
 
   const handleSwitchOrg = async (orgId: string) => {
     setActiveOrganizationId(orgId);
@@ -176,6 +177,8 @@ export default function App() {
     setAuthMode('login');
     navigatePath('/auth');
   };
+
+  if (pathname === '/app/control-center') return <Suspense fallback={<PageLoader />}><ControlCenterPage onNavigate={navigatePath} /></Suspense>;
 
   // Standalone Guest Portal (zero operational chrome)
   if (pathname.startsWith('/guest/')) {

@@ -22,7 +22,7 @@ export function PrivacyPolicyPage({
           onOpenAuth={onOpenAuth}
         />
       )}
-      <main className="flex-1 py-10 px-4 sm:px-6">
+      <main id="main-content" className="flex-1 py-10 px-4 sm:px-6">
         <div className="max-w-3xl mx-auto space-y-6">
           <button
             onClick={() => onNavigate('/')}
@@ -107,7 +107,7 @@ export function TermsPage({
           onOpenAuth={onOpenAuth}
         />
       )}
-      <main className="flex-1 py-10 px-4 sm:px-6">
+      <main id="main-content" className="flex-1 py-10 px-4 sm:px-6">
         <div className="max-w-3xl mx-auto space-y-6">
           <button
             onClick={() => onNavigate('/')}

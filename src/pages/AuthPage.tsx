@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ArrowLeft, AlertTriangle, CheckCircle2, KeyRound, LogOut, ShieldCheck } from 'lucide-react';
-import { apiFetch } from '../lib/api';
+import { apiFetch, setActiveOrganizationId } from '../lib/api';
 import {
   configureNeonAuthUrl,
   getNeonJwtToken,
@@ -62,6 +62,7 @@ export function AuthPage({
   });
   const [newPassword, setNewPassword] = useState('');
   const [notice, setNotice] = useState('');
+  const [invitationToken, setInvitationToken] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -151,7 +152,7 @@ export function AuthPage({
         const token = await getNeonJwtToken();
         if (!token) {
           setNotice(
-            'Account created in Neon Auth. Please verify your email address if required, then sign in to create your STAYWISE workspace.'
+            'Account created in Neon Auth. Please verify your email address, then sign in to create your STAYWISE workspace.'
           );
           setMode('login');
           return;
@@ -321,6 +322,20 @@ export function AuthPage({
             </div>
           )}
 
+          <form className="mb-5 space-y-2 border-b pb-4" onSubmit={async e => {
+            e.preventDefault(); setLoading(true); setError('');
+            try {
+              const result = await apiFetch('/api/auth/invitations/accept', { method: 'POST', body: JSON.stringify({ token: invitationToken.trim() }) });
+              setInvitationToken(''); setActiveOrganizationId(result.organization_id);
+              const ctx = await apiFetch('/api/auth/context');
+              if (!ctx.user) throw new Error('Invitation accepted. Reload and sign in again.');
+              onSuccess({ organizationId: ctx.user.organizationId, userId: ctx.user.id, actorName: ctx.user.name, actorRole: ctx.user.role });
+            } catch (err: any) { setError(err.message || 'Invitation could not be accepted. Sign in with a verified email first.'); }
+            finally { setLoading(false); }
+          }}>
+            <Input label="Invitation token (sign in with a verified email first)" value={invitationToken} onChange={e => setInvitationToken(e.target.value)} autoComplete="off" />
+            <Button type="submit" disabled={loading || !invitationToken.trim()}>Accept invitation</Button>
+          </form>
           <form onSubmit={handleSubmit} className="space-y-3.5">
             {(mode === 'register' || mode === 'onboard') && (
               <>

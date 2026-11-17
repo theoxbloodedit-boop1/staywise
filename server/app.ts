@@ -1,10 +1,13 @@
+import { AuthorizationError } from './lib/authorization.js';
+import { FieldEncryptionError } from './lib/field-encryption.js';
 import 'dotenv/config';
 import express from 'express';
 import compression from 'compression';
 import helmet from 'helmet';
 import { db, ensureDbReady, isDatabaseConfigured } from './db.js';
 import { ah, isOperationalRole, resolveGuestVerification, resolveSessionActor } from './domain.js';
-import { readUploadedAsset, saveUploadedImage } from './backup.js';
+import { type MediaPrincipal } from './lib/private-media.js';
+import { createMediaRouter } from './routes/media.js';
 import { createRateLimiter, getNeonAuthBaseUrl } from './security.js';
 import { authRouter } from './routes/auth.js';
 import { propertiesRouter } from './routes/properties.js';
@@ -15,6 +18,7 @@ import { incidentsRouter } from './routes/incidents.js';
 import { inspectionsRouter } from './routes/inspections.js';
 import { guestRouter } from './routes/guest.js';
 import { adminRouter } from './routes/admin.js';
+import { createControlCenterRouter } from './routes/controlCenter.js';
 import { platformCrmRouter } from './routes/platformCrm.js';
 import { APP_SHELL_HTML, NOT_FOUND_HTML, ROUTE_HTML } from './generated-shell.js';
 
@@ -126,7 +130,7 @@ app.get('/api/health', (_req, res) => {
 app.use(
   '/api',
   ah(async (req, res, next) => {
-    if (req.path === '/health') return next();
+    if (req.path === '/health' || req.path === '/control-center' || req.path.startsWith('/control-center/')) return next();
     if (!isDatabaseConfigured()) {
       return res.status(503).json({
         error: 'Database is not configured. Set DATABASE_URL to your Neon PostgreSQL connection string.',
@@ -138,69 +142,20 @@ app.use(
   })
 );
 
-// Serve uploaded images stored in Neon PostgreSQL BYTEA fallback
-app.get(
-  '/api/uploads/:id',
-  ah(async (req, res) => {
-    const asset = await readUploadedAsset(String(req.params.id));
-    if (!asset) return res.status(404).type('text/plain').send('Asset not found');
-    res.setHeader('Content-Type', asset.mime_type);
-    res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Robots-Tag', 'noindex, nofollow');
-    res.send(asset.data);
-  })
-);
+async function resolveMediaPrincipal(req: express.Request): Promise<MediaPrincipal> {
+  const actor = await resolveSessionActor(req);
+  if (actor) return { actor };
+  const slug = req.body?.slug || req.headers['x-staywise-guest-slug'];
+  const code = req.body?.code || req.headers['x-staywise-guest-code'];
+  if (typeof slug !== 'string' || typeof code !== 'string') throw new AuthorizationError(403, 'MEDIA_AUTH_REQUIRED');
+  const prop = await db.queryOne<any>('SELECT id,organization_id,timezone FROM properties WHERE slug=$1 AND archived=0',[slug]);
+  if (!prop) throw new AuthorizationError(404,'MEDIA_NOT_FOUND');
+  const verified = await resolveGuestVerification(prop,code);
+  if (!verified.valid) throw new AuthorizationError(403,'MEDIA_AUTH_REQUIRED');
+  return { guest: { organizationId:prop.organization_id,propertyId:prop.id,reservationId:verified.reservation.id } };
+}
 
-// Dedicated image upload endpoint (Vercel Blob primary, Neon PostgreSQL BYTEA fallback)
-app.post(
-  '/api/uploads',
-  uploadLimiter,
-  ah(async (req, res) => {
-    const actor = await resolveSessionActor(req);
-    const { dataUrl, filename, slug, code } = req.body || {};
-
-    let authorized = Boolean(actor && isOperationalRole(actor.actorRole));
-    let orgId = actor?.organizationId || null;
-    let propId: string | null = null;
-
-    if (!authorized && slug && code) {
-      const prop = await db.queryOne<any>(
-        'SELECT id, organization_id, timezone FROM properties WHERE slug = $1 AND archived = 0',
-        [String(slug)]
-      );
-      if (prop) {
-        const verification = await resolveGuestVerification(prop, String(code));
-        if (verification.valid) {
-          authorized = true;
-          orgId = prop.organization_id;
-          propId = prop.id;
-        }
-      }
-    }
-
-    if (!authorized) {
-      return res.status(401).json({
-        error: 'Authentication or verified active stay code required to upload evidence photos.',
-      });
-    }
-
-    if (!dataUrl || typeof dataUrl !== 'string') {
-      return res.status(400).json({ error: 'Image dataUrl is required.' });
-    }
-
-    try {
-      const url = await saveUploadedImage(dataUrl, {
-        prefix: typeof filename === 'string' ? filename : 'photo',
-        organizationId: orgId,
-        propertyId: propId,
-      });
-      res.status(201).json({ url });
-    } catch (err: any) {
-      res.status(400).json({ error: err?.message || 'Invalid image upload.' });
-    }
-  })
-);
+app.use('/api', createMediaRouter(db,resolveMediaPrincipal,uploadLimiter));
 
 app.use('/api/auth', authRouter);
 app.use('/api/properties', propertiesRouter);
@@ -211,6 +166,7 @@ app.use('/api/incidents', incidentsRouter);
 app.use('/api/inspections', inspectionsRouter);
 app.use('/api/guest', guestRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/control-center', createControlCenterRouter(db));
 app.use('/api/platform-crm', platformCrmRouter);
 
 // Strict HTTP 404 for unknown API endpoints
@@ -251,6 +207,7 @@ export function isKnownSpaRoute(urlPath: string): boolean {
     '/app/feedback',
     '/app/audit-logs',
     '/app/crm-admin',
+    '/app/control-center',
   ];
   return knownAppPaths.includes(clean);
 }
@@ -306,7 +263,12 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
   if (err instanceof SyntaxError && 'body' in err) {
     return res.status(400).json({ error: 'Malformed JSON request body.' });
   }
-  console.error('[STAYWISE ERROR]', err);
+  if (err instanceof AuthorizationError) return res.status(err.status).json({ error: err.message, code: err.code });
+  if (err instanceof FieldEncryptionError) {
+    return res.status(503).json({ error: err.message, code: err.code });
+  }
+  // Never log request bodies, SQL parameters, bearer tokens or decrypted values.
+  console.error('[STAYWISE ERROR]', { name: err?.name || 'Error' });
   if (!res.headersSent) {
     res.status(500).json({ error: 'Internal server error.' });
   }

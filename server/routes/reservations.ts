@@ -1,3 +1,4 @@
+import { authorizeProperty } from '../lib/authorization.js';
 import { Router } from 'express';
 import crypto from 'crypto';
 import { db } from '../db.js';
@@ -26,7 +27,7 @@ reservationsRouter.get(
     const rows = await db.query<any>(
       `SELECT r.*, p.name as property_name, p.slug as property_slug, p.country as property_country, p.currency as property_currency
        FROM reservations r
-       JOIN properties p ON p.id = r.property_id
+       JOIN properties p ON p.id = r.property_id AND p.organization_id = r.organization_id
        WHERE r.organization_id = $1
        ORDER BY r.check_in_date ASC`,
       [actor.organizationId]
@@ -51,6 +52,7 @@ reservationsRouter.post(
       [b.property_id, actor.organizationId]
     );
     if (!prop) return res.status(404).json({ error: 'Property not found in organization.' });
+    await authorizeProperty(db, actor, prop.id);
 
     const id = uid('res');
     const alphabet = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -80,13 +82,7 @@ reservationsRouter.post(
     );
 
     if (b.create_turnover_task !== false) {
-      const cleaner = await db.queryOne<{ id: string; name: string }>(
-        `SELECT u.id, u.name FROM organization_memberships m
-         JOIN users u ON u.id = m.user_id
-         WHERE m.organization_id = $1 AND m.role = 'Cleaning Staff' AND m.status = 'Active'
-         LIMIT 1`,
-        [actor.organizationId]
-      );
+      // Assignment is explicit: never pick an arbitrary organization cleaner.
 
       const cleanId = uid('cln');
       const checklist = [
@@ -105,10 +101,10 @@ reservationsRouter.post(
           prop.id,
           id,
           `Turnover for ${String(b.guest_name).trim()} — ${prop.name}`,
-          cleaner?.id || null,
-          cleaner?.name || 'Unassigned',
+          null,
+          'Unassigned',
           `${b.check_in_date}T14:00`,
-          cleaner ? 'Assigned' : 'Pending',
+          'Pending',
           JSON.stringify(checklist),
           `Linked to reservation ${accessCode}`,
           now,
@@ -141,7 +137,7 @@ reservationsRouter.post(
     });
 
     const created = await db.queryOne(
-      'SELECT r.*, p.name as property_name, p.slug as property_slug FROM reservations r JOIN properties p ON p.id = r.property_id WHERE r.id = $1',
+      'SELECT r.*, p.name as property_name, p.slug as property_slug FROM reservations r JOIN properties p ON p.id = r.property_id AND p.organization_id = r.organization_id WHERE r.id = $1',
       [id]
     );
     res.status(201).json(created);
@@ -158,6 +154,7 @@ reservationsRouter.patch(
       [req.params.id, actor.organizationId]
     );
     if (!existing) return res.status(404).json({ error: 'Reservation not found.' });
+    await authorizeProperty(db, actor, existing.property_id);
 
     const b = req.body || {};
     await db.execute(
@@ -186,7 +183,7 @@ reservationsRouter.patch(
     });
 
     const updated = await db.queryOne(
-      'SELECT r.*, p.name as property_name, p.slug as property_slug FROM reservations r JOIN properties p ON p.id = r.property_id WHERE r.id = $1',
+      'SELECT r.*, p.name as property_name, p.slug as property_slug FROM reservations r JOIN properties p ON p.id = r.property_id AND p.organization_id = r.organization_id WHERE r.id = $1',
       [existing.id]
     );
     res.json(updated);
