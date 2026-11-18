@@ -38,3 +38,14 @@ Diagnostic failures now include only allowlisted reason codes, not raw errors.
 35 local tests, both TypeScript checks and build passed. This does not prove the
 real staging failure was an opaque token; the next diagnostic distinguishes it
 from issuer/key/expiry failures. No audience is inferred or trusted automatically.
+
+## Separate exact JWT issuer
+Staging reported issuer_mismatch. NEON_AUTH_ISSUER now overrides the expected
+JWT issuer without changing the browser Auth URL or the configured JWKS URL.
+The normal verifier still requires exact issuer and audience matches.
+The diagnostic now verifies signature/expiry first using ONLY the configured
+JWKS, then returns bounded signed observedIssuer/audiences and issuerMatches.
+It does not accept issuer-provided key URLs or change environment settings.
+This supersedes the earlier diagnostic requirement to match issuer before
+reporting candidates. Candidates require operator/provider review; they do not
+grant authority. Tests cover separate issuer success and trailing-slash mismatch.

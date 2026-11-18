@@ -21,6 +21,11 @@ export function getNeonAuthBaseUrl(): string | null {
   return raw ? raw.replace(/\/+$/, '') : null;
 }
 
+/** JWT issuer is an exact claim, not necessarily the browser Auth URL. */
+export function getNeonAuthIssuer(): string | null {
+  return process.env.NEON_AUTH_ISSUER?.trim() || getNeonAuthBaseUrl();
+}
+
 export function getNeonAuthJwksUrl(): string | null {
   if (process.env.NEON_AUTH_JWKS_URL) return process.env.NEON_AUTH_JWKS_URL.trim();
   const base = getNeonAuthBaseUrl();
@@ -64,7 +69,7 @@ export async function verifyNeonAuthJwt(token: string | undefined): Promise<Veri
   const jwks = getJwks();
   if (!jwks) return null;
 
-  const baseUrl = getNeonAuthBaseUrl();
+  const baseUrl = getNeonAuthIssuer();
   const audience = process.env.NEON_AUTH_AUDIENCE?.trim();
   if (!baseUrl || !audience) return null;
   try {
@@ -94,12 +99,13 @@ export async function verifyNeonAuthJwt(token: string | undefined): Promise<Veri
 export async function diagnoseNeonSession(token: string | undefined) {
   if (!token || token.length > 16384) return { status: 'no_session' as const };
   const jwks = getJwks();
-  const issuer = getNeonAuthBaseUrl();
+  const issuer = getNeonAuthIssuer();
   if (!jwks || !issuer) return { status: 'configuration_incomplete' as const };
   try {
-    // Audience is deliberately inspected, NOT trusted for authentication here.
+    // Signature is verified against operator-configured JWKS BEFORE inspecting
+    // issuer/audience. This diagnostic never authenticates or changes trust.
     const { payload } = await jwtVerify(token, jwks, {
-      issuer, algorithms: ['RS256', 'ES256', 'EdDSA'],
+      algorithms: ['RS256', 'ES256', 'EdDSA'],
       requiredClaims: ['sub', 'exp', 'iat'],
     });
     if (!payload.iat || payload.iat > Date.now() / 1000 + 30) return { status: 'invalid_session' as const };
@@ -107,8 +113,12 @@ export async function diagnoseNeonSession(token: string | undefined) {
     const audiences = (typeof raw === 'string' ? [raw] : Array.isArray(raw) ? raw : [])
       .filter((value): value is string => typeof value === 'string' && value.length <= 512)
       .slice(0, 8);
+    const observedIssuer = typeof payload.iss === 'string' && payload.iss.length <= 1024
+      ? payload.iss : null;
     return {
       status: 'signature_verified_not_authorized' as const,
+      issuerMatches: observedIssuer === issuer,
+      observedIssuer,
       audiences,
       audienceConfigured: Boolean(process.env.NEON_AUTH_AUDIENCE?.trim()),
       emailVerified: payload.email_verified === true,

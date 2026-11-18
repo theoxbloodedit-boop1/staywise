@@ -24,9 +24,10 @@ test('session diagnostic verifies signature without granting authentication or e
   const { createJwtFixture } = await import('./helpers/jwt.js');
   const { diagnoseNeonSession, verifyNeonAuthJwt } = await import('../server/security.js');
   const fixture = await createJwtFixture();
-  const names = ['NEON_AUTH_BASE_URL', 'NEON_AUTH_JWKS_URL', 'NEON_AUTH_AUDIENCE'];
+  const names = ['NEON_AUTH_BASE_URL', 'NEON_AUTH_JWKS_URL', 'NEON_AUTH_AUDIENCE', 'NEON_AUTH_ISSUER'];
   const saved = names.map(name => process.env[name]);
   try {
+    delete process.env.NEON_AUTH_ISSUER;
     process.env.NEON_AUTH_BASE_URL = fixture.issuer;
     process.env.NEON_AUTH_JWKS_URL = `${fixture.issuer}/jwks`;
     delete process.env.NEON_AUTH_AUDIENCE;
@@ -40,7 +41,16 @@ test('session diagnostic verifies signature without granting authentication or e
     assert.deepEqual(await diagnoseNeonSession(undefined), { status: 'no_session' });
     assert.deepEqual(await diagnoseNeonSession(await fixture.sign({ exp: 1 })), { status: 'invalid_session', reason: 'expired' });
     process.env.NEON_AUTH_BASE_URL = `${fixture.issuer}/wrong`;
-    assert.deepEqual(await diagnoseNeonSession(token), { status: 'invalid_session', reason: 'issuer_mismatch' });
+    const mismatch = await diagnoseNeonSession(token);
+    assert.equal(mismatch.status, 'signature_verified_not_authorized');
+    assert.ok('issuerMatches' in mismatch && mismatch.issuerMatches === false);
+    assert.ok('observedIssuer' in mismatch && mismatch.observedIssuer === fixture.issuer);
+    process.env.NEON_AUTH_AUDIENCE = 'staywise-test';
+    assert.equal(await verifyNeonAuthJwt(token), null);
+    process.env.NEON_AUTH_ISSUER = fixture.issuer;
+    assert.equal((await verifyNeonAuthJwt(token))?.sub, 'auth-a');
+    process.env.NEON_AUTH_ISSUER = `${fixture.issuer}/`;
+    assert.equal(await verifyNeonAuthJwt(token), null);
   } finally {
     names.forEach((name, i) => { if (saved[i] === undefined) delete process.env[name]; else process.env[name] = saved[i]; });
     await fixture.close();
