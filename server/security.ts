@@ -64,6 +64,14 @@ export interface VerifiedNeonUser {
   expiresAt?: number;
 }
 
+/** Normalize only cryptographically verified claims. Conflicts fail closed. */
+export function hasVerifiedEmailClaim(payload: Record<string, unknown>): boolean {
+  const values = ['email_verified', 'emailVerified']
+    .filter(key => Object.prototype.hasOwnProperty.call(payload, key))
+    .map(key => payload[key]);
+  return values.length > 0 && values.every(value => value === true);
+}
+
 export async function verifyNeonAuthJwt(token: string | undefined): Promise<VerifiedNeonUser | null> {
   if (!token) return null;
   const jwks = getJwks();
@@ -86,7 +94,7 @@ export async function verifyNeonAuthJwt(token: string | undefined): Promise<Veri
       typeof payload.name === 'string' && payload.name.trim()
         ? payload.name.trim()
         : email.split('@')[0] || 'Operator';
-    const emailVerified = payload.email_verified === true;
+    const emailVerified = hasVerifiedEmailClaim(payload);
 
     if (!sub || !email) return null;
     return { sub, email, name, emailVerified, authenticationTime: typeof payload.auth_time === 'number' ? payload.auth_time : undefined, issuedAt: payload.iat, expiresAt: payload.exp };
@@ -121,7 +129,8 @@ export async function diagnoseNeonSession(token: string | undefined) {
       observedIssuer,
       audiences,
       audienceConfigured: Boolean(process.env.NEON_AUTH_AUDIENCE?.trim()),
-      emailVerified: payload.email_verified === true,
+      emailVerified: hasVerifiedEmailClaim(payload),
+      emailVerificationClaimNames: ['email_verified', 'emailVerified'].filter(key => Object.prototype.hasOwnProperty.call(payload, key)),
     };
   } catch (error) {
     // Allowlisted codes only; never return provider messages, URLs or claim values.

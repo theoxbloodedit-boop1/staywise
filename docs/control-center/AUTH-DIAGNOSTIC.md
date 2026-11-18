@@ -83,3 +83,16 @@ self-reported routing evidence, not proof of provider trusted-origin configurati
 or wire-level Origin headers. It distinguishes the actual browser setup from the
 server-only /config response. No domain is auto-added, and no access check changes.
 Validation: 37 tests, both TypeScript checks and build passed locally.
+
+## Verified-email claim normalization
+After successful OTP verification and a subsequent login, application still
+reported unverified email. Review found the verifier recognized only the OIDC
+email_verified spelling, while Better Auth uses emailVerified in its user model.
+Both spellings are now supported ONLY in a signature/issuer/audience-verified
+JWT. Every present spelling must be boolean true: absent, string values, false,
+null and conflicting fields fail closed. No frontend state or DB edit is trusted.
+Diagnostic reports only which of these two field names is present. This supports
+the provider contract without assuming a live token's shape; a fresh staging
+login is still needed to establish the exact observed claim and end-to-end result.
+Signed local JWT tests cover both names, conflict and malformed/missing values.
+37 tests, application/test TypeScript and build passed.
