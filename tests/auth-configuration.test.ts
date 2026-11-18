@@ -46,3 +46,15 @@ test('session diagnostic verifies signature without granting authentication or e
     await fixture.close();
   }
 });
+
+test('login establishes provider session before checking application setup', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const source = await readFile(new URL('../src/pages/AuthPage.tsx', import.meta.url), 'utf8');
+  // Regression guard for the no_session dead end: never preflight login before Neon.
+  assert.ok(!source.includes("if (mode === 'register' || mode === 'login') {\n        const configuration"));
+  const login = source.slice(source.indexOf("} else if (mode === 'login') {"));
+  const signIn = login.indexOf('await neonSignIn(email, password)');
+  const preflight = login.indexOf("apiFetch('/api/auth/configuration')");
+  const context = login.indexOf("apiFetch('/api/auth/context')");
+  assert.ok(signIn >= 0 && preflight > signIn && context > preflight);
+});

@@ -13,9 +13,11 @@ JWT audience. Production/database settings are not changed.
 - The ordinary authentication verifier still requires the explicit configured
   audience. An observed audience must be reviewed against the provider contract
   before configuring it; diagnostics are not automatic trust-on-first-use.
-- The auth page checks setup before signup/login and offers a diagnostic button
-  after an error. An existing provider session is needed for useful diagnostics.
-  With no session and missing configuration, this is not a complete recovery flow.
+- The auth page checks setup before signup. Login first establishes a provider
+  session, then checks server setup before requesting application context. This
+  allows a signed-in user to run the diagnostic even when audience is missing.
+  Provider sign-in alone never authenticates the user to Staywise or grants roles.
+  A valid provider session is needed for useful diagnostics.
 - No raw token, email, subject, cookie or provider error is returned by diagnostics.
 
 Local evidence: 32 tests passed, application/test TypeScript passed, build passed.

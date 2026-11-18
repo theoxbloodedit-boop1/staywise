@@ -143,7 +143,7 @@ export function AuthPage({
         );
       }
 
-      if (mode === 'register' || mode === 'login') {
+      if (mode === 'register') {
         const configuration = await apiFetch('/api/auth/configuration');
         if (!configuration.configured) {
           throw new Error('Sign-in is temporarily unavailable while the server is being configured. If you already registered, keep your account and try signing in again once setup is complete.');
@@ -177,7 +177,13 @@ export function AuthPage({
           await completeWorkspaceProvisioning();
         }
       } else if (mode === 'login') {
+        // Establish the provider session first so diagnostics can inspect it.
+        // This does not authenticate the user to the Staywise API.
         await neonSignIn(email, password);
+        const configuration = await apiFetch('/api/auth/configuration');
+        if (!configuration.configured) {
+          throw new Error('Your Neon sign-in succeeded, but Staywise server setup is incomplete. Click Check sign-in setup below. Do not create another account.');
+        }
         const ctx = await apiFetch('/api/auth/context');
         if (ctx.authenticated && !ctx.needsOnboarding && ctx.user) {
           onSuccess({
