@@ -37,6 +37,7 @@ authRouter.get(
     if (!neonUser || !neonUser.emailVerified) {
       return res.json({
         authenticated: false,
+        emailVerificationRequired: Boolean(neonUser && !neonUser.emailVerified),
         needsOnboarding: false,
         user: null,
         neonUser: null,

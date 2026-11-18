@@ -49,3 +49,14 @@ It does not accept issuer-provided key URLs or change environment settings.
 This supersedes the earlier diagnostic requirement to match issuer before
 reporting candidates. Candidates require operator/provider review; they do not
 grant authority. Tests cover separate issuer success and trailing-slash mismatch.
+
+## Email verification recovery
+AuthPage now offers Send email verification link on login/onboarding, using the
+installed SDK adapter.sendVerificationEmail with a callback bound to the current
+origin. It never edits provider verification records. Successful API acceptance
+is described as requested, not delivered. The UI prevents repeat submission in
+that mount; provider-side rate limits/delivery still apply. Auth context signals
+verification required only after ordinary JWT verification succeeds, and the
+login error no longer mislabels that condition as a JWKS issue.
+Validation: prior 35-test suite passed, new SSR login/onboarding test passed,
+application/test TypeScript and build passed. Real outbound email not tested.

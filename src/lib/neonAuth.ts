@@ -111,6 +111,19 @@ export async function neonResetPassword(newPassword: string, token: string) {
   return res;
 }
 
+/** Sends the provider verification flow; never edits emailVerified locally. */
+export async function neonSendVerificationEmail(email: string) {
+  const client = getNeonAuth();
+  if (!client) throw new Error('Neon Auth is not configured.');
+  const address = email.trim();
+  if (!address || !address.includes('@')) throw new Error('Enter your account email first.');
+  const result = await client.adapter.sendVerificationEmail({
+    email: address,
+    callbackURL: `${window.location.origin}/auth`,
+  });
+  if (result.error) throw new Error(result.error.message || 'Verification email could not be requested.');
+}
+
 export async function neonSignOut() {
   const client = getNeonAuth();
   if (!client) return;

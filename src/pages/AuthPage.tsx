@@ -9,6 +9,7 @@ import {
   neonResetPassword,
   neonSignIn,
   neonSignOut,
+  neonSendVerificationEmail,
   neonSignUp,
 } from '../lib/neonAuth';
 import { Button, Card, Input, Select } from '../components/ui';
@@ -62,6 +63,7 @@ export function AuthPage({
   });
   const [newPassword, setNewPassword] = useState('');
   const [notice, setNotice] = useState('');
+  const [verificationRequested, setVerificationRequested] = useState(false);
   const [invitationToken, setInvitationToken] = useState('');
 
   const [loading, setLoading] = useState(false);
@@ -196,8 +198,10 @@ export function AuthPage({
           setOwnerName(ctx.neonUser?.name || '');
           setEmail(ctx.neonUser?.email || email);
           setMode('onboard');
+        } else if (ctx.emailVerificationRequired) {
+          throw new Error('Please verify your email address. Use Send email verification link below, open the email, then sign in again.');
         } else {
-          throw new Error('Unable to verify session JWT with STAYWISE API. Check NEON_AUTH_JWKS_URL.');
+          throw new Error('Staywise could not validate this session. Use Check sign-in setup for details.');
         }
       } else if (mode === 'forgot') {
         const redirectTo = `${window.location.origin}/auth`;
@@ -338,6 +342,27 @@ export function AuthPage({
                 }}>
                 Check sign-in setup
               </button>
+            </div>
+          )}
+
+          {(mode === 'login' || mode === 'onboard') && (
+            <div className="mb-4 text-xs text-slate-600">
+              <button type="button" className="text-teal-800 underline disabled:opacity-50"
+                disabled={loading || verificationRequested || !email.trim()}
+                onClick={async () => {
+                  setLoading(true);
+                  setError('');
+                  try {
+                    await neonSendVerificationEmail(email);
+                    setVerificationRequested(true);
+                    setNotice('Verification requested. If your account is eligible, check your inbox and spam folder. Open the link, then return here and sign in again.');
+                  } catch (err: unknown) {
+                    setError(err instanceof Error ? err.message : 'Verification could not be requested.');
+                  } finally { setLoading(false); }
+                }}>
+                {verificationRequested ? 'Verification email requested' : 'Send email verification link'}
+              </button>
+              <p className="mt-1">Verify ownership of your email before accessing a workspace.</p>
             </div>
           )}
 
