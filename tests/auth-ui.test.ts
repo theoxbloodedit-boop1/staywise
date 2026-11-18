@@ -9,7 +9,9 @@ test('login and onboarding offer provider email verification without an admin sh
     const html = renderToStaticMarkup(React.createElement(AuthPage, {
       onBack() {}, onNavigate() {}, onSuccess() {}, onboardingUser,
     }));
-    assert.match(html, /Send email verification link/);
+    assert.match(html, /Send email verification code/);
+    assert.match(html, /Email verification code \(6 digits\)/);
+    assert.match(html, /Verify email code/);
     assert.match(html, /Verify ownership of your email/);
     assert.doesNotMatch(html, /Mark.*verified|Grant.*SUPER_ADMIN/);
   }

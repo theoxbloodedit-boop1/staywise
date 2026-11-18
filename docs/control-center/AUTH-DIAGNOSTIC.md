@@ -60,3 +60,17 @@ verification required only after ordinary JWT verification succeeds, and the
 login error no longer mislabels that condition as a JWKS issue.
 Validation: prior 35-test suite passed, new SSR login/onboarding test passed,
 application/test TypeScript and build passed. Real outbound email not tested.
+
+## OTP correction
+User evidence confirms delivery of a six-digit verification code, not a link.
+The UI now has a separate email-code field and Verify email code action, distinct
+from organization invitation acceptance. Send/resend uses emailOtp.sendVerificationOtp
+with type email-verification; validation uses emailOtp.verifyEmail. Only the provider
+changes verification status. A successful response signs out before a fresh login;
+an invalid/expired response clears the code and enables a new request. No OTP is
+persisted in storage, logged or sent to Staywise business APIs.
+Installed SDK plugin methods are exercised against a local HTTP fake provider:
+correct endpoint/body, malformed code rejected before request, provider rejection
+propagated. This proves transport integration, not real email deliverability.
+Full 36-test suite/build/typechecks passed before addition of the HTTP contract test;
+that additional test and test TypeScript pass separately.

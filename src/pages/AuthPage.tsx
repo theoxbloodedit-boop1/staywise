@@ -10,6 +10,7 @@ import {
   neonSignIn,
   neonSignOut,
   neonSendVerificationEmail,
+  neonVerifyEmailCode,
   neonSignUp,
 } from '../lib/neonAuth';
 import { Button, Card, Input, Select } from '../components/ui';
@@ -64,6 +65,7 @@ export function AuthPage({
   const [newPassword, setNewPassword] = useState('');
   const [notice, setNotice] = useState('');
   const [verificationRequested, setVerificationRequested] = useState(false);
+  const [emailCode, setEmailCode] = useState('');
   const [invitationToken, setInvitationToken] = useState('');
 
   const [loading, setLoading] = useState(false);
@@ -199,7 +201,7 @@ export function AuthPage({
           setEmail(ctx.neonUser?.email || email);
           setMode('onboard');
         } else if (ctx.emailVerificationRequired) {
-          throw new Error('Please verify your email address. Use Send email verification link below, open the email, then sign in again.');
+          throw new Error('Please verify your email address. Use the email verification code form below, then sign in again.');
         } else {
           throw new Error('Staywise could not validate this session. Use Check sign-in setup for details.');
         }
@@ -355,14 +357,34 @@ export function AuthPage({
                   try {
                     await neonSendVerificationEmail(email);
                     setVerificationRequested(true);
-                    setNotice('Verification requested. If your account is eligible, check your inbox and spam folder. Open the link, then return here and sign in again.');
+                    setNotice('Verification code requested. If your account is eligible, check your inbox and spam folder, then enter the newest six-digit code below.');
                   } catch (err: unknown) {
                     setError(err instanceof Error ? err.message : 'Verification could not be requested.');
                   } finally { setLoading(false); }
                 }}>
-                {verificationRequested ? 'Verification email requested' : 'Send email verification link'}
+                {verificationRequested ? 'Verification code requested' : 'Send email verification code'}
               </button>
               <p className="mt-1">Verify ownership of your email before accessing a workspace.</p>
+              <label htmlFor="email-verification-code" className="block mt-3 mb-1">Email verification code (6 digits)</label>
+              <input id="email-verification-code" type="text" inputMode="numeric" autoComplete="one-time-code"
+                maxLength={6} value={emailCode} onChange={e => setEmailCode(e.target.value.replace(/\D/g, ''))}
+                className="w-full rounded border border-slate-300 p-2" />
+              <button type="button" disabled={loading || !email.trim() || !/^\d{6}$/.test(emailCode)}
+                className="mt-2 text-teal-800 underline disabled:opacity-50"
+                onClick={async () => {
+                  setLoading(true); setError(''); setNotice('');
+                  try {
+                    await neonVerifyEmailCode(email, emailCode);
+                    setEmailCode('');
+                    await neonSignOut();
+                    setMode('login');
+                    setNotice('Email verified by Neon. Sign in again to obtain a fresh session.');
+                  } catch (err: unknown) {
+                    setEmailCode('');
+                    setVerificationRequested(false);
+                    setError(err instanceof Error ? err.message : 'Email verification failed.');
+                  } finally { setLoading(false); }
+                }}>Verify email code</button>
             </div>
           )}
 

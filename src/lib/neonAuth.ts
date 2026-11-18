@@ -111,17 +111,36 @@ export async function neonResetPassword(newPassword: string, token: string) {
   return res;
 }
 
+// The neon-js wrapper erases plugin methods from its public adapter type.
+// These methods are installed by @neon/auth's core emailOTPClient plugin.
+type EmailOtpAdapter = {
+  emailOtp: {
+    sendVerificationOtp(input: { email: string; type: 'email-verification' }): Promise<{ error?: { message?: string } | null }>;
+    verifyEmail(input: { email: string; otp: string }): Promise<{ error?: { message?: string } | null }>;
+  };
+};
+
 /** Sends the provider verification flow; never edits emailVerified locally. */
 export async function neonSendVerificationEmail(email: string) {
   const client = getNeonAuth();
   if (!client) throw new Error('Neon Auth is not configured.');
   const address = email.trim();
   if (!address || !address.includes('@')) throw new Error('Enter your account email first.');
-  const result = await client.adapter.sendVerificationEmail({
+  const result = await (client.adapter as unknown as EmailOtpAdapter).emailOtp.sendVerificationOtp({
     email: address,
-    callbackURL: `${window.location.origin}/auth`,
+    type: 'email-verification',
   });
   if (result.error) throw new Error(result.error.message || 'Verification email could not be requested.');
+}
+
+export async function neonVerifyEmailCode(email: string, code: string) {
+  const client = getNeonAuth();
+  if (!client) throw new Error('Neon Auth is not configured.');
+  if (!/^\d{6}$/.test(code.trim())) throw new Error('Enter the six-digit email verification code.');
+  const result = await (client.adapter as unknown as EmailOtpAdapter).emailOtp.verifyEmail({
+    email: email.trim(), otp: code.trim(),
+  });
+  if (result.error) throw new Error(result.error.message || 'Code could not be verified. Request a new code and try again.');
 }
 
 export async function neonSignOut() {
