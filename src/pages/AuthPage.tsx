@@ -4,6 +4,7 @@ import { apiFetch, setActiveOrganizationId } from '../lib/api';
 import {
   configureNeonAuthUrl,
   getNeonJwtToken,
+  getNeonAuthUrl,
   isNeonAuthConfigured,
   neonRequestPasswordReset,
   neonResetPassword,
@@ -66,6 +67,19 @@ export function AuthPage({
   const [notice, setNotice] = useState('');
   const [verificationRequested, setVerificationRequested] = useState(false);
   const [emailCode, setEmailCode] = useState('');
+  const [authAttempt, setAuthAttempt] = useState<{
+    action: string; origin: string; provider: string; at: string;
+  } | null>(null);
+  const recordAuthAttempt = (action: string) => {
+    // Capture public routing details at the moment of the operation. No email,
+    // password, OTP, cookie, query string or bearer token is included.
+    let provider = 'unconfigured';
+    try {
+      const url = new URL(getNeonAuthUrl());
+      provider = `${url.origin}${url.pathname}`;
+    } catch { /* Do not echo malformed configuration values. */ }
+    setAuthAttempt({ action, origin: window.location.origin, provider, at: new Date().toISOString() });
+  };
   const [invitationToken, setInvitationToken] = useState('');
 
   const [loading, setLoading] = useState(false);
@@ -130,6 +144,7 @@ export function AuthPage({
     e.preventDefault();
     setError('');
     setNotice('');
+    recordAuthAttempt(mode);
     setLoading(true);
 
     try {
@@ -337,7 +352,7 @@ export function AuthPage({
                   setLoading(true);
                   try {
                     const result = await apiFetch('/api/auth/session-diagnostic', { method: 'POST' });
-                    setNotice(`Sign-in setup diagnostic (does not grant access): ${JSON.stringify(result)}`);
+                    setNotice(`Sign-in setup diagnostic (does not grant access): ${JSON.stringify({ ...result, browserAttempt: authAttempt })}`);
                   } catch {
                     setNotice('The sign-in diagnostic is unavailable. No account changes were made.');
                   } finally { setLoading(false); }
@@ -355,6 +370,7 @@ export function AuthPage({
                   setLoading(true);
                   setError('');
                   try {
+                    recordAuthAttempt('send-email-verification-code');
                     await neonSendVerificationEmail(email);
                     setVerificationRequested(true);
                     setNotice('Verification code requested. If your account is eligible, check your inbox and spam folder, then enter the newest six-digit code below.');
@@ -374,6 +390,7 @@ export function AuthPage({
                 onClick={async () => {
                   setLoading(true); setError(''); setNotice('');
                   try {
+                    recordAuthAttempt('verify-email-code');
                     await neonVerifyEmailCode(email, emailCode);
                     setEmailCode('');
                     await neonSignOut();

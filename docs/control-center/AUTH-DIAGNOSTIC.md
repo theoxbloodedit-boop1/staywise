@@ -74,3 +74,12 @@ correct endpoint/body, malformed code rejected before request, provider rejectio
 propagated. This proves transport integration, not real email deliverability.
 Full 36-test suite/build/typechecks passed before addition of the HTTP contract test;
 that additional test and test TypeScript pass separately.
+
+## Capture browser operation context
+The existing diagnostic button now includes the last attempted action, timestamp,
+window.location.origin, and sanitized provider origin/path captured at operation
+time. It includes no query string, email, password, OTP or token. This is browser
+self-reported routing evidence, not proof of provider trusted-origin configuration
+or wire-level Origin headers. It distinguishes the actual browser setup from the
+server-only /config response. No domain is auto-added, and no access check changes.
+Validation: 37 tests, both TypeScript checks and build passed locally.
