@@ -113,8 +113,19 @@ export async function diagnoseNeonSession(token: string | undefined) {
       audienceConfigured: Boolean(process.env.NEON_AUTH_AUDIENCE?.trim()),
       emailVerified: payload.email_verified === true,
     };
-  } catch {
-    return { status: 'invalid_session' as const };
+  } catch (error) {
+    // Allowlisted codes only; never return provider messages, URLs or claim values.
+    const code = (error as { code?: string }).code;
+    const claim = (error as { claim?: string }).claim;
+    const reason = code === 'ERR_JWT_EXPIRED' ? 'expired'
+      : code === 'ERR_JWT_CLAIM_VALIDATION_FAILED' && claim === 'iss' ? 'issuer_mismatch'
+      : code === 'ERR_JWT_CLAIM_VALIDATION_FAILED' ? 'required_claim_invalid'
+      : code === 'ERR_JWKS_NO_MATCHING_KEY' ? 'signing_key_not_found'
+      : code === 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED' ? 'signature_invalid'
+      : code === 'ERR_JOSE_ALG_NOT_ALLOWED' ? 'algorithm_not_allowed'
+      : code === 'ERR_JWS_INVALID' || code === 'ERR_JWT_INVALID' ? 'token_format_invalid'
+      : 'verification_unavailable';
+    return { status: 'invalid_session' as const, reason };
   }
 }
 

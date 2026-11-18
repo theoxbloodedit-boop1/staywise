@@ -36,11 +36,11 @@ test('session diagnostic verifies signature without granting authentication or e
     assert.ok(!JSON.stringify(result).includes('a@example.test'));
     assert.ok(!JSON.stringify(result).includes(token));
     assert.equal(await verifyNeonAuthJwt(token), null);
-    assert.deepEqual(await diagnoseNeonSession('bad.token.value'), { status: 'invalid_session' });
+    assert.equal((await diagnoseNeonSession('bad.token.value')).status, 'invalid_session');
     assert.deepEqual(await diagnoseNeonSession(undefined), { status: 'no_session' });
-    assert.deepEqual(await diagnoseNeonSession(await fixture.sign({ exp: 1 })), { status: 'invalid_session' });
+    assert.deepEqual(await diagnoseNeonSession(await fixture.sign({ exp: 1 })), { status: 'invalid_session', reason: 'expired' });
     process.env.NEON_AUTH_BASE_URL = `${fixture.issuer}/wrong`;
-    assert.deepEqual(await diagnoseNeonSession(token), { status: 'invalid_session' });
+    assert.deepEqual(await diagnoseNeonSession(token), { status: 'invalid_session', reason: 'issuer_mismatch' });
   } finally {
     names.forEach((name, i) => { if (saved[i] === undefined) delete process.env[name]; else process.env[name] = saved[i]; });
     await fixture.close();

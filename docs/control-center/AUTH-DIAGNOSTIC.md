@@ -27,3 +27,14 @@ The SQL companion 005_staging_install.sql is for a fresh reviewed base only.
 It is NOT a repair/replay script. The user's existing staging already contains
 005 objects without a recorded checksum; do not execute the companion there or
 mark that database reconciled without a full structural review.
+
+## Token transport correction
+The installed SDK returns getSession().data.session.token, replacing it with
+set-auth-jwt only when that response header is available. An opaque session
+credential must not be sent to a JWT verifier. The browser now shape-checks the
+SDK result and falls back to the provider's /token endpoint with credentials and
+no-store when necessary. Shape is not authentication; all server checks remain.
+Diagnostic failures now include only allowlisted reason codes, not raw errors.
+35 local tests, both TypeScript checks and build passed. This does not prove the
+real staging failure was an opaque token; the next diagnostic distinguishes it
+from issuer/key/expiry failures. No audience is inferred or trusted automatically.

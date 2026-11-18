@@ -1,3 +1,4 @@
+import { resolveNeonToken } from './neonToken';
 import { createInternalNeonAuth } from '@neon/neon-js/auth';
 import { BetterAuthReactAdapter } from '@neon/neon-js/auth/react/adapters';
 
@@ -38,11 +39,21 @@ export function getNeonAuth(): InternalNeonAuthInstance | null {
 export async function getNeonJwtToken(): Promise<string | null> {
   const client = getNeonAuth();
   if (!client) return null;
-  try {
-    return await client.getJWTToken();
-  } catch {
-    return null;
-  }
+  return resolveNeonToken(
+    () => client.getJWTToken(),
+    async () => {
+      // Better Auth's explicit JWT endpoint; the SDK wrapper can return an
+      // opaque session credential when set-auth-jwt is not exposed by CORS.
+      const response = await fetch(`${runtimeAuthUrl}/token`, {
+        credentials: 'include', cache: 'no-store',
+        headers: { Accept: 'application/json' },
+      });
+      if (!response.ok) return null;
+      const result: unknown = await response.json();
+      return result && typeof result === 'object' && 'token' in result
+        ? result.token : null;
+    },
+  );
 }
 
 export async function neonSignIn(email: string, password: string) {
