@@ -27,6 +27,15 @@ export function getNeonAuthJwksUrl(): string | null {
   return base ? `${base}/.well-known/jwks.json` : null;
 }
 
+/** Public configuration names only: never return environment values or tokens. */
+export function getNeonAuthConfigurationStatus() {
+  const missing: string[] = [];
+  if (!getNeonAuthBaseUrl()?.trim()) missing.push('NEON_AUTH_BASE_URL');
+  if (!getNeonAuthJwksUrl()?.trim()) missing.push('NEON_AUTH_JWKS_URL');
+  if (!process.env.NEON_AUTH_AUDIENCE?.trim()) missing.push('NEON_AUTH_AUDIENCE');
+  return { configured: missing.length === 0, missing };
+}
+
 let cachedJwksUrl: string | null = null;
 let cachedJwks: ReturnType<typeof createRemoteJWKSet> | null = null;
 
@@ -78,6 +87,34 @@ export async function verifyNeonAuthJwt(token: string | undefined): Promise<Veri
     return { sub, email, name, emailVerified, authenticationTime: typeof payload.auth_time === 'number' ? payload.auth_time : undefined, issuedAt: payload.iat, expiresAt: payload.exp };
   } catch {
     return null;
+  }
+}
+
+/** Diagnostic only. Never use this result as an authenticated identity. */
+export async function diagnoseNeonSession(token: string | undefined) {
+  if (!token || token.length > 16384) return { status: 'no_session' as const };
+  const jwks = getJwks();
+  const issuer = getNeonAuthBaseUrl();
+  if (!jwks || !issuer) return { status: 'configuration_incomplete' as const };
+  try {
+    // Audience is deliberately inspected, NOT trusted for authentication here.
+    const { payload } = await jwtVerify(token, jwks, {
+      issuer, algorithms: ['RS256', 'ES256', 'EdDSA'],
+      requiredClaims: ['sub', 'exp', 'iat'],
+    });
+    if (!payload.iat || payload.iat > Date.now() / 1000 + 30) return { status: 'invalid_session' as const };
+    const raw = payload.aud;
+    const audiences = (typeof raw === 'string' ? [raw] : Array.isArray(raw) ? raw : [])
+      .filter((value): value is string => typeof value === 'string' && value.length <= 512)
+      .slice(0, 8);
+    return {
+      status: 'signature_verified_not_authorized' as const,
+      audiences,
+      audienceConfigured: Boolean(process.env.NEON_AUTH_AUDIENCE?.trim()),
+      emailVerified: payload.email_verified === true,
+    };
+  } catch {
+    return { status: 'invalid_session' as const };
   }
 }
 

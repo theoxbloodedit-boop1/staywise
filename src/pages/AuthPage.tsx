@@ -143,6 +143,13 @@ export function AuthPage({
         );
       }
 
+      if (mode === 'register' || mode === 'login') {
+        const configuration = await apiFetch('/api/auth/configuration');
+        if (!configuration.configured) {
+          throw new Error('Sign-in is temporarily unavailable while the server is being configured. If you already registered, keep your account and try signing in again once setup is complete.');
+        }
+      }
+
       if (mode === 'register') {
         if (!acceptedLegal) {
           throw new Error('Please accept the Terms of Service and Privacy Policy.');
@@ -313,6 +320,18 @@ export function AuthPage({
           {error && (
             <div className="mb-4 p-3 rounded-md bg-red-50 border border-red-200 text-xs text-red-700">
               {error}
+              <button type="button" className="block mt-2 underline" disabled={loading}
+                onClick={async () => {
+                  setLoading(true);
+                  try {
+                    const result = await apiFetch('/api/auth/session-diagnostic', { method: 'POST' });
+                    setNotice(`Sign-in setup diagnostic (does not grant access): ${JSON.stringify(result)}`);
+                  } catch {
+                    setNotice('The sign-in diagnostic is unavailable. No account changes were made.');
+                  } finally { setLoading(false); }
+                }}>
+                Check sign-in setup
+              </button>
             </div>
           )}
 

@@ -4,16 +4,29 @@ import { parseAssignments, isKnownOperationalRole, AuthorizationError } from '..
 import { Router } from 'express';
 import { db } from '../db.js';
 import { ah, getActor, isPlatformAdminEmail, logAudit, nowIso, requireAuth, resolveNeonJwt, uid } from '../domain.js';
-import { createRateLimiter, getNeonAuthBaseUrl } from '../security.js';
+import { createRateLimiter, getNeonAuthBaseUrl, getNeonAuthConfigurationStatus, diagnoseNeonSession } from '../security.js';
 import { DEFAULT_PLAN_TIER, getPlanSpec, parsePlanTier } from '../../src/lib/plans.js';
 
 export const authRouter = Router();
+
+// Safe operator preflight; no account, credential or token contents are returned.
+authRouter.get('/configuration', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json(getNeonAuthConfigurationStatus());
+});
 
 const authLimiter = createRateLimiter({
   windowMs: 60_000,
   max: 30,
   prefix: 'auth',
 });
+
+authRouter.post('/session-diagnostic', authLimiter, ah(async (req, res) => {
+  res.setHeader('Cache-Control', 'private, no-store');
+  const header = req.headers.authorization;
+  const token = typeof header === 'string' && header.startsWith('Bearer ') ? header.slice(7) : undefined;
+  res.json(await diagnoseNeonSession(token));
+}));
 
 authRouter.get(
   '/context',
@@ -153,6 +166,13 @@ authRouter.post(
   '/onboard',
   authLimiter,
   ah(async (req, res) => {
+    const configuration = getNeonAuthConfigurationStatus();
+    if (!configuration.configured) {
+      return res.status(503).json({
+        code: 'AUTH_CONFIGURATION_INCOMPLETE',
+        error: `Sign-in is temporarily unavailable because server authentication setup is incomplete (${configuration.missing.join(', ')}). Your existing account has not been deleted.`,
+      });
+    }
     const neonUser = await resolveNeonJwt(req);
     if (!neonUser || !neonUser.emailVerified) {
       return res.status(401).json({ error: 'Valid Neon Auth session required before creating a workspace.' });
