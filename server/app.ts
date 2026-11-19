@@ -72,7 +72,7 @@ app.use((_req, res, next) => {
 });
 
 app.use(compression());
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '4mb' }));
 
 // Global gentle API rate limit
 const apiLimiter = createRateLimiter({
@@ -126,7 +126,7 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
-// Ensure Neon PostgreSQL schema & initial seed exist on first API call
+// Connectivity only. Schema changes and demo seeding are explicit operator actions.
 app.use(
   '/api',
   ah(async (req, res, next) => {
@@ -258,7 +258,7 @@ if (process.env.VERCEL === '1') {
 // Structured JSON error handler
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   if (err?.type === 'entity.too.large') {
-    return res.status(413).json({ error: 'Request payload too large (max 10 MB).' });
+    return res.status(413).json({ error: 'Photo or request too large (max 4 MB). Resize the photo and retry.' });
   }
   if (err instanceof SyntaxError && 'body' in err) {
     return res.status(400).json({ error: 'Malformed JSON request body.' });

@@ -53,7 +53,7 @@ export function FeaturesPage({
       title: 'Grounded Guest Assistant + Escalation',
       desc: 'Answers routine questions strictly from your approved property guide and routes unverified requests—such as early check-in or emergency leaks—to your team.',
       href: '/guest-guidebook',
-      linkText: 'See Guest AI Workflow',
+      linkText: 'See Guest guide search Workflow',
     },
     {
       icon: Camera,
@@ -156,7 +156,7 @@ export function PricingPage({
             Free full access to every Staywise feature — no credit card required
           </h1>
           <p className="text-base text-slate-600">
-            Billing checkout is completely disabled while we’re in Early Access. Every workspace gets full access to guidebooks, encrypted lock vaults, grounded AI replies, cleaning checklists, inspections, and work orders at $0/month.
+            Billing checkout is completely disabled while we’re in Early Access. Every workspace gets full access to guidebooks, encrypted lock vaults, keyword-based guide replies, cleaning checklists, inspections, and work orders at $0/month.
           </p>
         </div>
 

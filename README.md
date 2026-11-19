@@ -24,13 +24,26 @@ Multi-tenant SaaS platform for US & Australian short-term rental operators, buil
    - Under **Auth → Domains / Trusted Origins**, add your deployment origins:
      - `http://localhost:3000` (for local development)
      - `https://<your-vercel-project>.vercel.app` (and your custom domain if applicable)
-4. *(Optional)* Run the schema & initial seed manually against Neon, or let the API initialize automatically on first request:
+4. **Required:** review the target database, backup and SQL before running migrations.
+   API requests never create tables or demo records. On a fresh database:
    ```bash
-   # Using local CLI with DATABASE_URL set in .env:
-   npm run db:migrate
-   npm run db:seed
+   STAYWISE_DB_ACTION=reviewed npm run db:migrate
+   STAYWISE_CONTROL_DB_ACTION=reviewed npm run db:control:migrate
    ```
-   You can also paste [`db/schema.sql`](./db/schema.sql) directly into the Neon SQL Editor.
+   The first command installs base + 001–004 in one transaction, with checksums.
+   The second installs 005 separately under its existing checksum ledger. **Both
+   are required for this application version**, including account status fields.
+   `db/schema.sql` alone is NOT a complete installation.
+
+   **Existing databases:** back up and review schema/history before either command.
+   In particular, if 005 objects exist without a matching ledger, STOP and follow
+   `docs/control-center/STAGING-GATES-RUNBOOK.md`; do not replay or mark it applied
+   blindly. The application migration ledger detects changed files after their
+   first recorded installation, not pre-existing schema drift.
+
+   Demo seeding is never part of deployment. Only for a disposable local database:
+   `STAYWISE_DEMO_SEED=local-disposable-only npm run db:seed`.
+   The seed command refuses NODE_ENV=production and Vercel environments.
 
 ---
 
@@ -44,6 +57,8 @@ Copy `.env.example` to `.env` for local development, and configure the same vari
 | `DATABASE_URL_UNPOOLED` | Recommended | Direct Neon PostgreSQL connection string for CLI migrations |
 | `VITE_NEON_AUTH_URL` | Yes | Neon Auth base URL exposed to the Vite frontend |
 | `NEON_AUTH_BASE_URL` | Yes | Neon Auth base URL used by Express to derive `issuer` and JWKS URL |
+| `NEON_AUTH_ISSUER` | Provider-dependent | Exact signed issuer; set explicitly if different from Auth API URL |
+| `NEON_AUTH_AUDIENCE` | Yes | Exact signed provider audience, no guessed default |
 | `NEON_AUTH_JWKS_URL` | Optional | Explicit override for `${NEON_AUTH_BASE_URL}/.well-known/jwks.json` |
 | `STAYWISE_DATA_KEY` | Yes (Prod) | 64-character hex AES-256-GCM key (`openssl rand -hex 32`) |
 | `BLOB_READ_WRITE_TOKEN` | Optional | Vercel Blob token; falls back to Neon `uploaded_assets` `BYTEA` if unset |
@@ -74,7 +89,7 @@ git push -u origin main
    - **Output Directory:** `dist`
    - **Serverless Function:** `api/index.ts` (handles `/api/*`, `/robots.txt`, `/sitemap.xml`)
 3. Add the Environment Variables from Section 2 (`DATABASE_URL`, `VITE_NEON_AUTH_URL`, `NEON_AUTH_BASE_URL`, `STAYWISE_DATA_KEY`, and optionally `BLOB_READ_WRITE_TOKEN`).
-4. Deploy! Verify readiness at `https://<your-domain>/api/health`.
+4. Run the reviewed migrations above before accepting traffic. Check connectivity at `https://<your-domain>/api/health`.
 5. Ensure `https://<your-domain>` is added under **Neon Console → Auth → Trusted Origins**.
 6. Open `/auth`, create your Neon Auth account and STAYWISE organization, and start managing properties.
 
@@ -86,8 +101,8 @@ git push -u origin main
 npm install
 cp .env.example .env
 # Edit .env with your Neon DATABASE_URL and Neon Auth URL
-npm run db:migrate
-npm run db:seed
+STAYWISE_DB_ACTION=reviewed npm run db:migrate
+STAYWISE_CONTROL_DB_ACTION=reviewed npm run db:control:migrate
 npm run dev
 ```
 
@@ -102,3 +117,16 @@ vercel dev
 npm run typecheck
 npm run build
 ```
+
+## Current functional boundaries
+
+- Free-access workspace plans: no payment processor, no charge, no new invoice
+  issued. Historical `Early Access ($0)` records are preserved in storage but are
+  not presented as actual invoices by the billing API.
+- Notifications are internal records only, not email/SMS delivery receipts.
+  Critical incidents require active dashboard monitoring; no external paging SLA.
+- Guest guide assistance uses keyword search, not generative AI.
+- Photos: browser JPEG resize (1920px, quality 0.8), then UTF-8 request-size
+  preflight below 3.8 MB. Server fully validates/re-encodes private evidence.
+  Unsupported formats such as HEIC must be converted by the user. Real mobile
+  camera/browser QA is still required; local tests do not certify every device.

@@ -1,6 +1,6 @@
 import "dotenv/config";
 import crypto from "node:crypto";
-import { db, getPool } from "../server/db.js";
+import { db, closePoolIfInitialized } from "../server/db.js";
 import {
   auditControl,
   requiredReason,
@@ -79,4 +79,4 @@ main()
     );
     process.exitCode = 1;
   })
-  .finally(() => getPool().end());
+  .finally(() => closePoolIfInitialized());

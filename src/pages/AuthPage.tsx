@@ -4,11 +4,14 @@ import { apiFetch, setActiveOrganizationId } from '../lib/api';
 import {
   configureNeonAuthUrl,
   getNeonJwtToken,
+  getNeonAuthUrl,
   isNeonAuthConfigured,
   neonRequestPasswordReset,
   neonResetPassword,
   neonSignIn,
   neonSignOut,
+  neonSendVerificationEmail,
+  neonVerifyEmailCode,
   neonSignUp,
 } from '../lib/neonAuth';
 import { Button, Card, Input, Select } from '../components/ui';
@@ -62,6 +65,21 @@ export function AuthPage({
   });
   const [newPassword, setNewPassword] = useState('');
   const [notice, setNotice] = useState('');
+  const [verificationRequested, setVerificationRequested] = useState(false);
+  const [emailCode, setEmailCode] = useState('');
+  const [authAttempt, setAuthAttempt] = useState<{
+    action: string; origin: string; provider: string; at: string;
+  } | null>(null);
+  const recordAuthAttempt = (action: string) => {
+    // Capture public routing details at the moment of the operation. No email,
+    // password, OTP, cookie, query string or bearer token is included.
+    let provider = 'unconfigured';
+    try {
+      const url = new URL(getNeonAuthUrl());
+      provider = `${url.origin}${url.pathname}`;
+    } catch { /* Do not echo malformed configuration values. */ }
+    setAuthAttempt({ action, origin: window.location.origin, provider, at: new Date().toISOString() });
+  };
   const [invitationToken, setInvitationToken] = useState('');
 
   const [loading, setLoading] = useState(false);
@@ -126,6 +144,7 @@ export function AuthPage({
     e.preventDefault();
     setError('');
     setNotice('');
+    recordAuthAttempt(mode);
     setLoading(true);
 
     try {
@@ -141,6 +160,13 @@ export function AuthPage({
         throw new Error(
           'Neon Auth is not configured yet. Set VITE_NEON_AUTH_URL and NEON_AUTH_BASE_URL in your environment variables.'
         );
+      }
+
+      if (mode === 'register') {
+        const configuration = await apiFetch('/api/auth/configuration');
+        if (!configuration.configured) {
+          throw new Error('Sign-in is temporarily unavailable while the server is being configured. If you already registered, keep your account and try signing in again once setup is complete.');
+        }
       }
 
       if (mode === 'register') {
@@ -170,7 +196,13 @@ export function AuthPage({
           await completeWorkspaceProvisioning();
         }
       } else if (mode === 'login') {
+        // Establish the provider session first so diagnostics can inspect it.
+        // This does not authenticate the user to the Staywise API.
         await neonSignIn(email, password);
+        const configuration = await apiFetch('/api/auth/configuration');
+        if (!configuration.configured) {
+          throw new Error('Your Neon sign-in succeeded, but Staywise server setup is incomplete. Click Check sign-in setup below. Do not create another account.');
+        }
         const ctx = await apiFetch('/api/auth/context');
         if (ctx.authenticated && !ctx.needsOnboarding && ctx.user) {
           onSuccess({
@@ -183,8 +215,10 @@ export function AuthPage({
           setOwnerName(ctx.neonUser?.name || '');
           setEmail(ctx.neonUser?.email || email);
           setMode('onboard');
+        } else if (ctx.emailVerificationRequired) {
+          throw new Error('Please verify your email address. Use the email verification code form below, then sign in again.');
         } else {
-          throw new Error('Unable to verify session JWT with STAYWISE API. Check NEON_AUTH_JWKS_URL.');
+          throw new Error('Staywise could not validate this session. Use Check sign-in setup for details.');
         }
       } else if (mode === 'forgot') {
         const redirectTo = `${window.location.origin}/auth`;
@@ -313,6 +347,61 @@ export function AuthPage({
           {error && (
             <div className="mb-4 p-3 rounded-md bg-red-50 border border-red-200 text-xs text-red-700">
               {error}
+              <button type="button" className="block mt-2 underline" disabled={loading}
+                onClick={async () => {
+                  setLoading(true);
+                  try {
+                    const result = await apiFetch('/api/auth/session-diagnostic', { method: 'POST' });
+                    setNotice(`Sign-in setup diagnostic (does not grant access): ${JSON.stringify({ ...result, browserAttempt: authAttempt })}`);
+                  } catch {
+                    setNotice('The sign-in diagnostic is unavailable. No account changes were made.');
+                  } finally { setLoading(false); }
+                }}>
+                Check sign-in setup
+              </button>
+            </div>
+          )}
+
+          {(mode === 'login' || mode === 'onboard') && (
+            <div className="mb-4 text-xs text-slate-600">
+              <button type="button" className="text-teal-800 underline disabled:opacity-50"
+                disabled={loading || verificationRequested || !email.trim()}
+                onClick={async () => {
+                  setLoading(true);
+                  setError('');
+                  try {
+                    recordAuthAttempt('send-email-verification-code');
+                    await neonSendVerificationEmail(email);
+                    setVerificationRequested(true);
+                    setNotice('Verification code requested. If your account is eligible, check your inbox and spam folder, then enter the newest six-digit code below.');
+                  } catch (err: unknown) {
+                    setError(err instanceof Error ? err.message : 'Verification could not be requested.');
+                  } finally { setLoading(false); }
+                }}>
+                {verificationRequested ? 'Verification code requested' : 'Send email verification code'}
+              </button>
+              <p className="mt-1">Verify ownership of your email before accessing a workspace.</p>
+              <label htmlFor="email-verification-code" className="block mt-3 mb-1">Email verification code (6 digits)</label>
+              <input id="email-verification-code" type="text" inputMode="numeric" autoComplete="one-time-code"
+                maxLength={6} value={emailCode} onChange={e => setEmailCode(e.target.value.replace(/\D/g, ''))}
+                className="w-full rounded border border-slate-300 p-2" />
+              <button type="button" disabled={loading || !email.trim() || !/^\d{6}$/.test(emailCode)}
+                className="mt-2 text-teal-800 underline disabled:opacity-50"
+                onClick={async () => {
+                  setLoading(true); setError(''); setNotice('');
+                  try {
+                    recordAuthAttempt('verify-email-code');
+                    await neonVerifyEmailCode(email, emailCode);
+                    setEmailCode('');
+                    await neonSignOut();
+                    setMode('login');
+                    setNotice('Email verified by Neon. Sign in again to obtain a fresh session.');
+                  } catch (err: unknown) {
+                    setEmailCode('');
+                    setVerificationRequested(false);
+                    setError(err instanceof Error ? err.message : 'Email verification failed.');
+                  } finally { setLoading(false); }
+                }}>Verify email code</button>
             </div>
           )}
 

@@ -46,8 +46,8 @@ export function AiConsolePage({ orgId }: { orgId: string }) {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="AI Guest Assistant & Escalation Console"
-        description="Monitor verified property-grounded answers, safeguard compliance, unanswered knowledge gaps, and human escalations."
+        title="Guide Search & Escalation Console"
+        description="Keyword-based guide search, not generative AI. Review unanswered questions and internal escalations; no email or SMS delivery."
       />
 
       {/* Mandatory Safeguards Banner */}
@@ -56,7 +56,7 @@ export function AiConsolePage({ orgId }: { orgId: string }) {
           <div className="flex items-center gap-2.5">
             <ShieldCheck className="w-5 h-5 text-teal-400 shrink-0" />
             <div>
-              <div className="text-xs font-semibold">Mandatory AI Grounding & Safety Safeguards Active</div>
+              <div className="text-xs font-semibold">Guide search — no generative AI provider connected</div>
               <div className="text-[11px] text-slate-300 mt-0.5">
                 Zero cross-property data bleed · Restricted access codes masked until verified · Unverified gaps & emergencies auto-escalate
               </div>

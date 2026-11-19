@@ -176,7 +176,7 @@ export function SettingsBillingAuditPage({
         method: 'POST',
         body: JSON.stringify({ planTier }),
       });
-      setNotice(`Subscription updated to ${planTier} · Invoice generated`);
+      setNotice(`Subscription updated to ${planTier} · Free access — no payment collected or invoice issued`);
       setTimeout(() => setNotice(''), 3000);
       onOrgUpdated();
       await refreshGovernance();
@@ -247,7 +247,7 @@ export function SettingsBillingAuditPage({
     <div className="space-y-6">
       <PageHeader
         title="Billing & Organization Settings"
-        description="Manage subscription tiers, invoices, workspace backups, data exports, readiness preferences, and audit history."
+        description="Free access: no payment processor is connected. Manage workspace limits, exports, preferences and audit history."
         actions={
           notice && (
             <span className="text-xs font-medium px-3 py-1.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
@@ -357,10 +357,10 @@ export function SettingsBillingAuditPage({
         <Card className="lg:col-span-5 p-5 space-y-3">
           <div className="flex items-center gap-2">
             <Receipt className="w-4 h-4 text-teal-700" />
-            <h2 className="text-sm font-semibold text-slate-900">Billing & Invoice History</h2>
+            <h2 className="text-sm font-semibold text-slate-900">Payment History — Free Access</h2>
           </div>
           {(billingInfo?.invoices || []).length === 0 ? (
-            <div className="text-xs text-slate-400">No invoices recorded yet.</div>
+            <div className="text-xs text-slate-400">No payments collected. Free access does not issue an invoice.</div>
           ) : (
             <div className="divide-y divide-slate-100 border border-slate-200 rounded-lg">
               {billingInfo.invoices.map((inv: any) => (

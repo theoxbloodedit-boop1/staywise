@@ -284,13 +284,13 @@ export async function dispatchNotification(opts: {
       id,
       opts.organizationId,
       opts.propertyId || null,
-      opts.channel,
+      'In-App',
       opts.recipientRole,
       opts.recipientName,
       opts.urgency,
       opts.title,
       opts.body,
-      'Delivered',
+      'Available In-App',
       nowIso(),
     ]
   );

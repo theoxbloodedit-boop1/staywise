@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { applyControlMigration } from "../server/lib/control-migrations.js";
 import fs from "node:fs/promises";
-import { db, getPool } from "../server/db.js";
+import { db, closePoolIfInitialized } from "../server/db.js";
 
 // Does NOT initialize the application schema or seed customer records.
 async function main() {
@@ -23,4 +23,4 @@ main()
     );
     process.exitCode = 1;
   })
-  .finally(() => getPool().end());
+  .finally(() => closePoolIfInitialized());

@@ -1184,7 +1184,7 @@ export function GuestPortalPage({ slug }: { slug: string }) {
         <nav className="sticky bottom-0 bg-white border-t border-slate-200 grid grid-cols-4 text-[11px] font-medium z-30">
           {[
             { id: 'guide' as const, label: 'Welcome Book', icon: Sparkles },
-            { id: 'ai' as const, label: 'AI Assistant', icon: Bot },
+            { id: 'ai' as const, label: 'Guide Search', icon: Bot },
             { id: 'support' as const, label: 'Help & Issues', icon: LifeBuoy },
             { id: 'feedback' as const, label: 'Feedback', icon: MessageSquareHeart },
           ].map((item) => {

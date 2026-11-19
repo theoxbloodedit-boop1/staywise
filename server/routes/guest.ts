@@ -322,10 +322,10 @@ guestRouter.post(
     if (org?.ai_monthly_allowance && usedThisMonth >= org.ai_monthly_allowance) {
       return res.json({
         id: uid('ai'),
-        answer: `Our automated concierge has reached its monthly inquiry limit for this workspace. I’ve routed your question straight to the local host team for human assistance.`,
+        answer: `Guide search has reached its monthly inquiry limit. Please contact your host directly; this question has not been forwarded.`,
         sources: [],
-        confidence: 'Escalated — Allowance Reached',
-        escalated: true,
+        confidence: 'Unavailable — Allowance Reached',
+        escalated: false,
         knowledgeGap: false,
         emergencyAlert: false,
       });
@@ -375,7 +375,7 @@ guestRouter.post(
       });
     }
 
-    res.json({ id: convId, ...result });
+    res.json({ id: convId, ...result, answerMode: 'keyword-guide-search', externalDelivery: false });
   })
 );
 

@@ -1,6 +1,5 @@
 import { Pool, neonConfig, type PoolClient } from '@neondatabase/serverless';
 import ws from 'ws';
-import { seedIfEmpty } from './seed-data.js';
 
 // Enable WebSocket transport in Node.js environments (Node 20/22/Vercel Functions)
 neonConfig.webSocketConstructor = ws;
@@ -30,6 +29,15 @@ export function getPool(): Pool {
     idleTimeoutMillis: 30_000,
   });
   return poolInstance;
+}
+
+/** Operator shutdown must never initialize a pool after a rejected command. */
+export async function closePoolIfInitialized(): Promise<void> {
+  if (!poolInstance) return;
+  const pool = poolInstance;
+  poolInstance = null;
+  readyPromise = null;
+  await pool.end();
 }
 
 function wrapClient(client: Pool | PoolClient): DbExecutor {
@@ -396,8 +404,8 @@ export async function ensureDbReady(): Promise<void> {
   if (!isDatabaseConfigured()) return;
   if (!readyPromise) {
     readyPromise = (async () => {
-      await initSchema();
-      await seedIfEmpty(db);
+      // Readiness never mutates schema or creates demonstration records.
+      await db.queryOne("SELECT 1 AS ready");
     })().catch((err) => {
       readyPromise = null;
       throw err;

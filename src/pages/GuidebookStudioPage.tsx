@@ -420,7 +420,7 @@ export function GuidebookStudioPage({
                   </div>
                   <Input label="Host Email" value={activeSection.content.hostEmail || ''} onChange={(e) => updateLocalSectionContent('hostEmail', e.target.value)} />
                   <TextArea label="Property Announcements" rows={2} value={activeSection.content.announcements || ''} onChange={(e) => updateLocalSectionContent('announcements', e.target.value)} />
-                  <TextArea label="Important Notes (Used by AI Assistant)" rows={3} value={activeSection.content.importantNotes || ''} onChange={(e) => updateLocalSectionContent('importantNotes', e.target.value)} />
+                  <TextArea label="Important Notes (Used by Guide Search)" rows={3} value={activeSection.content.importantNotes || ''} onChange={(e) => updateLocalSectionContent('importantNotes', e.target.value)} />
                 </div>
               )}
 

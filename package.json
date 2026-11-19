@@ -11,7 +11,11 @@
     "test": "tsx --test tests/*.test.ts",
     "db:migrate": "tsx server/migrate.ts",
     "db:seed": "tsx server/seed-cli.ts",
-    "typecheck:tests": "tsc --project tsconfig.tests.json --noEmit"
+    "typecheck:tests": "tsc --project tsconfig.tests.json --noEmit",
+    "typecheck:tools": "tsc --project tsconfig.tools.json --noEmit",
+    "verify": "npm run typecheck && npm run typecheck:tests && npm run typecheck:tools && npm test && npm run build && npm audit --audit-level=low",
+    "db:control:migrate": "tsx scripts/control-migrate.ts",
+    "db:control:bootstrap": "tsx scripts/control-bootstrap.ts"
   },
   "dependencies": {
     "@fontsource/inter": "^5.1.1",

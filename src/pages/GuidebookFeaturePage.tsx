@@ -124,7 +124,7 @@ export function GuidebookFeaturePage({
           </div>
         </section>
 
-        {/* Access Security & Grounded AI */}
+        {/* Access Security & Grounded guide search */}
         <section className="grid md:grid-cols-3 gap-6">
           <Card className="p-6 rounded-2xl space-y-2.5">
             <KeyRound className="w-5 h-5 text-teal-800" />
@@ -154,7 +154,7 @@ export function GuidebookFeaturePage({
           <div className="space-y-1.5">
             <h2 className="text-xl font-bold">Launch your first welcome book today—100% free</h2>
             <p className="text-xs text-slate-200">
-              Start from one of 12 property templates with every guidebook, QR, and AI feature unlocked.
+              Start from one of 12 property templates with every guidebook, QR, and guide search feature unlocked.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">

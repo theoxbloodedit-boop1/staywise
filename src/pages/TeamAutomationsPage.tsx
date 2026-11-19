@@ -199,7 +199,7 @@ export function AutomationsPage({ orgId }: { orgId: string }) {
     <div className="space-y-5">
       <PageHeader
         title="Automation Rules & Notification Delivery"
-        description="Event-driven triggers with role-based routing, quiet hours respect, critical urgency overrides, and duplicate prevention."
+        description="Internal notifications only. No email or SMS is sent. Critical issues require active monitoring of this workspace."
       />
 
       <div className="grid lg:grid-cols-12 gap-5">
@@ -211,7 +211,7 @@ export function AutomationsPage({ orgId }: { orgId: string }) {
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-semibold text-slate-900">{r.name}</span>
-                    <Badge variant="neutral">{r.channel}</Badge>
+                    <Badge variant="neutral">{'In-App only — no email or SMS'}</Badge>
                   </div>
                   <p className="text-xs text-slate-600">{r.description}</p>
                   <div className="text-[11px] text-slate-400">
