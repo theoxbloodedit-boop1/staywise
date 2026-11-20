@@ -28,7 +28,7 @@ export function AuthPage({
   onSuccess,
   onSignedOut,
 }: {
-  initialMode?: 'register' | 'login' | 'forgot' | 'reset';
+  initialMode?: 'register' | 'staff-register' | 'login' | 'forgot' | 'reset';
   defaultPlan?: string;
   onboardingUser?: { email: string; name: string } | null;
   onBack: () => void;
@@ -36,9 +36,10 @@ export function AuthPage({
   onSuccess: (session: SessionContext) => void;
   onSignedOut?: () => void;
 }) {
-  const [mode, setMode] = useState<'register' | 'login' | 'forgot' | 'reset' | 'onboard'>(
+  const [mode, setMode] = useState<'register' | 'staff-register' | 'login' | 'forgot' | 'reset' | 'onboard'>(
     onboardingUser ? 'onboard' : initialMode
   );
+  const [staffFlow, setStaffFlow] = useState(initialMode === 'staff-register');
   const [neonReady, setNeonReady] = useState(() => isNeonAuthConfigured());
 
   const resolveInitialPlan = () => {
@@ -162,18 +163,26 @@ export function AuthPage({
         );
       }
 
-      if (mode === 'register') {
+      if (mode === 'register' || mode === 'staff-register') {
         const configuration = await apiFetch('/api/auth/configuration');
         if (!configuration.configured) {
           throw new Error('Sign-in is temporarily unavailable while the server is being configured. If you already registered, keep your account and try signing in again once setup is complete.');
         }
       }
 
-      if (mode === 'register') {
+      if (mode === 'register' || mode === 'staff-register') {
         if (!acceptedLegal) {
           throw new Error('Please accept the Terms of Service and Privacy Policy.');
         }
         await neonSignUp(ownerName, email, password);
+        if (mode === 'staff-register') {
+          // Identity only: never invoke organization onboarding for invited staff.
+          setStaffFlow(true);
+          setPassword('');
+          setMode('login');
+          setNotice('Staff account created. Verify your email using the code form, then sign in and accept your invitation. No organization has been created.');
+          return;
+        }
 
         const token = await getNeonJwtToken();
         if (!token) {
@@ -211,6 +220,8 @@ export function AuthPage({
             actorName: ctx.user.name,
             actorRole: ctx.user.role,
           });
+        } else if (ctx.authenticated && ctx.needsOnboarding && (staffFlow || invitationToken.trim())) {
+          setNotice('Signed in. Paste your private invitation token above and click Accept invitation. No organization has been created.');
         } else if (ctx.authenticated && ctx.needsOnboarding) {
           setOwnerName(ctx.neonUser?.name || '');
           setEmail(ctx.neonUser?.email || email);
@@ -263,7 +274,9 @@ export function AuthPage({
                 <h1 className="text-base font-bold text-slate-900">
                   {mode === 'onboard'
                     ? 'Set Up Your Workspace'
-                    : mode === 'register'
+                    : mode === 'staff-register'
+                      ? 'Create Your Staff Account'
+                      : mode === 'register'
                       ? 'Create Your Staywise Account'
                       : mode === 'login'
                         ? 'Welcome back'
@@ -313,7 +326,7 @@ export function AuthPage({
             </div>
           )}
 
-          {(mode === 'register' || mode === 'login') && (
+          {(mode === 'register' || mode === 'staff-register' || mode === 'login') && (
             <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-md mb-5">
               <button
                 type="button"
@@ -332,6 +345,7 @@ export function AuthPage({
                 type="button"
                 onClick={() => {
                   setMode('register');
+                  setStaffFlow(false);
                   setError('');
                   setNotice('');
                 }}
@@ -344,6 +358,14 @@ export function AuthPage({
             </div>
           )}
 
+          {(mode === 'login' || mode === 'onboard' || mode === 'staff-register') && (
+            <div className="mb-4 space-y-2">
+              <button type="button" className="text-sm text-teal-700 underline" onClick={() => {
+                setStaffFlow(true); setMode('staff-register'); setError(''); setNotice('');
+              }}>Invited staff? Create a staff account</button>
+              {mode === 'staff-register' && <p className="text-xs">Use the exact invited email. This creates a login only, not an organization. After email verification, sign in and accept your invitation.</p>}
+            </div>
+          )}
           {error && (
             <div className="mb-4 p-3 rounded-md bg-red-50 border border-red-200 text-xs text-red-700">
               {error}
@@ -426,6 +448,7 @@ export function AuthPage({
             <Button type="submit" disabled={loading || !invitationToken.trim()}>Accept invitation</Button>
           </form>
           <form onSubmit={handleSubmit} className="space-y-3.5">
+            {mode === 'staff-register' && <Input label="Full Name" required value={ownerName} onChange={e => setOwnerName(e.target.value)} />}
             {(mode === 'register' || mode === 'onboard') && (
               <>
                 <Input
@@ -469,7 +492,7 @@ export function AuthPage({
               </>
             )}
 
-            {(mode === 'register' || mode === 'login' || mode === 'forgot') && (
+            {(mode === 'register' || mode === 'staff-register' || mode === 'login' || mode === 'forgot') && (
               <Input
                 label="Work Email"
                 type="email"
@@ -480,19 +503,19 @@ export function AuthPage({
               />
             )}
 
-            {(mode === 'register' || mode === 'login') && (
+            {(mode === 'register' || mode === 'staff-register' || mode === 'login') && (
               <Input
-                label={mode === 'register' ? 'Password (min 8 characters)' : 'Password'}
+                label={mode === 'register' || mode === 'staff-register' ? 'Password (min 8 characters)' : 'Password'}
                 type="password"
                 required
-                minLength={mode === 'register' ? 8 : 1}
+                minLength={mode === 'register' || mode === 'staff-register' ? 8 : 1}
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
             )}
 
-            {(mode === 'register' || mode === 'onboard') && (
+            {(mode === 'register' || mode === 'staff-register' || mode === 'onboard') && (
               <label className="flex items-start gap-2 text-xs text-slate-600 pt-1">
                 <input
                   type="checkbox"
@@ -565,7 +588,9 @@ export function AuthPage({
                 ? 'Signing in...'
                 : mode === 'onboard'
                   ? 'Create Workspace & Continue'
-                  : mode === 'register'
+                  : mode === 'staff-register'
+                    ? 'Create Staff Account Only'
+                    : mode === 'register'
                     ? 'Create Account & Workspace'
                     : mode === 'login'
                       ? 'Sign In'
