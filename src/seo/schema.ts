@@ -20,12 +20,12 @@ export function softwareApplicationSchema() {
     operatingSystem: 'Web',
     url: SITE_ORIGIN,
     description:
-      'Mobile guest welcome books, AES-256 stay-gated door and Wi-Fi vaults, grounded guest AI assistance, and photo-verified turnover operations for short-term rental hosts.',
+      'Mobile guest welcome books, AES-256 stay-gated door and Wi-Fi vaults, keyword-based guide search, and photo-verified turnover operations for short-term rental hosts.',
     offers: {
       '@type': 'Offer',
       price: '0',
       priceCurrency: 'USD',
-      description: '100% Free Early Access with full feature access unlocked and no credit card required.',
+      description: 'Free Early Access. No credit card required. Payments and external SMS/email notifications are not connected.',
     },
     publisher: {
       '@type': 'Organization',

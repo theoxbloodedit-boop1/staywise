@@ -162,9 +162,9 @@ export function LandingPage({
         <section className="pt-4 sm:pt-6 pb-12 px-4 sm:px-6 max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 items-center gap-8 lg:gap-12 py-8 sm:py-12">
             <div className="min-w-0 space-y-6">
-              <div className="inline-flex items-center gap-2 rounded-full border border-teal-200 bg-teal-50 px-3 py-1.5 text-xs font-semibold text-teal-900"><span className="h-1.5 w-1.5 rounded-full bg-brand-600" />Built for hospitality operations</div>
-              <h1 className="text-[38px] sm:text-5xl xl:text-[58px] font-semibold tracking-[-0.045em] text-brand-navy leading-[1.08]">A better guest arrival.<br /><span className="text-brand-600">A clearer turnover day.</span></h1>
-              <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-lg">Welcome books for your guests. Cleaning, inspections and incidents for your team. One workspace to see the details that need attention.</p>
+              <div className="inline-flex items-center gap-2 rounded-full border border-teal-200 bg-teal-50 px-3 py-1.5 text-xs font-semibold text-teal-900"><span className="h-1.5 w-1.5 rounded-full bg-brand-600" />Short-term rental operations, simplified</div>
+              <h1 className="text-[38px] sm:text-5xl xl:text-[58px] font-semibold tracking-[-0.045em] text-brand-navy leading-[1.08]">Your rentals.<br /><span className="text-brand-600">One clear workspace.</span></h1>
+              <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-lg">Manage guest guides, cleaning, inspections, and reported issues in one place. Know what needs attention—and what to do next.</p>
               <div className="flex flex-col sm:flex-row gap-3">
                 <Button size="lg" variant="secondary" onClick={() => onOpenAuth('register','Starter')}>Create Free Workspace <ArrowRight className="w-4 h-4" /></Button>
                 <a href="#product-preview" className="inline-flex min-h-[48px] items-center justify-center gap-2 px-5 rounded-md border border-slate-300 font-medium text-sm hover:bg-slate-50">Explore the product <ArrowRight className="w-4 h-4" /></a>
@@ -266,7 +266,7 @@ export function LandingPage({
               <ul className="space-y-3 text-sm text-slate-700 pt-1">
                 {[
                   'One mobile welcome book with parking, Wi-Fi, appliances, and local picks',
-                  'A guest assistant that uses your guidebook content',
+                  'Private guide search for verified guests',
                   'Property-scoped cleaning, inspection and incident views',
                   'Recorded activity and work orders for follow-up',
                 ].map((line) => (

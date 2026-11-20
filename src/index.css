@@ -80,7 +80,7 @@
 
 /* Shared foundations: visible keyboard access and a quiet, reduced-motion UI. */
 :root { --sw-navy: #10182B; --sw-teal: #087F78; --sw-cloud: #F7F9FC; --sw-mist: #DCE5EF; }
-body { margin: 0; color: var(--sw-navy); }
+body { margin: 0; color: var(--sw-navy); font-size: 16px; line-height: 1.55; }
 *, *::before, *::after { box-sizing: border-box; }
 :where(a, button, input, select, textarea, summary):focus-visible {
   outline: 3px solid #087F78 !important; outline-offset: 3px;

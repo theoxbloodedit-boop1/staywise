@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useId, useRef } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '../../lib/cn';
 export { cn } from '../../lib/cn';
@@ -41,7 +41,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-md border leading-4 whitespace-nowrap',
+        'inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-md border leading-4 whitespace-nowrap',
         BADGE_STYLES[variant],
         className
       )}
@@ -97,10 +97,10 @@ export function Input({
 }: React.InputHTMLAttributes<HTMLInputElement> & { label?: string }) {
   return (
     <label className="block space-y-1">
-      {label && <span className="block text-xs font-medium text-slate-700">{label}</span>}
+      {label && <span className="block text-sm font-medium text-slate-700">{label}</span>}
       <input
         className={cn(
-          'w-full min-h-[44px] px-3 text-[13px] bg-white border border-slate-200 rounded-md text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-900/10',
+          'w-full min-h-[44px] px-3 text-base bg-white border border-slate-200 rounded-md text-slate-900 placeholder:text-slate-500 focus:outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-900/10',
           className
         )}
         {...props}
@@ -116,10 +116,10 @@ export function TextArea({
 }: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { label?: string }) {
   return (
     <label className="block space-y-1">
-      {label && <span className="block text-xs font-medium text-slate-700">{label}</span>}
+      {label && <span className="block text-sm font-medium text-slate-700">{label}</span>}
       <textarea
         className={cn(
-          'w-full p-2.5 text-[13px] bg-white border border-slate-200 rounded-md text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-900/10',
+          'w-full p-2.5 text-base bg-white border border-slate-200 rounded-md text-slate-900 placeholder:text-slate-500 focus:outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-900/10',
           className
         )}
         {...props}
@@ -136,10 +136,10 @@ export function Select({
 }: React.SelectHTMLAttributes<HTMLSelectElement> & { label?: string }) {
   return (
     <label className="block space-y-1">
-      {label && <span className="block text-xs font-medium text-slate-700">{label}</span>}
+      {label && <span className="block text-sm font-medium text-slate-700">{label}</span>}
       <select
         className={cn(
-          'w-full min-h-[44px] px-2.5 text-[13px] bg-white border border-slate-200 rounded-md text-slate-900 focus:outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-900/10',
+          'w-full min-h-[44px] px-2.5 text-base bg-white border border-slate-200 rounded-md text-slate-900 focus:outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-900/10',
           className
         )}
         {...props}
@@ -165,10 +165,35 @@ export function Modal({
   children: React.ReactNode;
   maxWidth?: string;
 }) {
+  const dialog = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  const close = useRef(onClose);
+  close.current = onClose;
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.activeElement as HTMLElement | null;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const focusable = () => Array.from(dialog.current?.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex="0"]') || []).filter(element => element.getClientRects().length > 0);
+    const firstInput = dialog.current?.querySelector<HTMLElement>('input:not([disabled]),select:not([disabled]),textarea:not([disabled])');
+    (firstInput || focusable()[0] || dialog.current)?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { event.preventDefault(); close.current(); }
+      if (event.key !== 'Tab') return;
+      const items = focusable();
+      const first = items[0], last = items[items.length - 1];
+      if (!first) { event.preventDefault(); dialog.current?.focus(); return; }
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog.current)) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = overflow; if (previous?.isConnected) previous.focus(); };
+  }, [open]);
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/45 backdrop-blur-[1px]">
       <div
+        ref={dialog} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}
         className={cn(
           'w-full bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col',
           maxWidth
@@ -176,12 +201,14 @@ export function Modal({
       >
         <div className="flex items-start justify-between px-5 py-4 border-b border-slate-200">
           <div>
-            <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+            <h2 id={titleId} className="text-lg font-semibold text-slate-900">{title}</h2>
             {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
           </div>
           <button
             onClick={onClose}
-            className="p-1 text-slate-400 hover:text-slate-700 rounded-md hover:bg-slate-100"
+            aria-label="Close dialog"
+            type="button"
+            className="p-3 text-slate-600 hover:text-slate-700 rounded-md hover:bg-slate-100"
           >
             <X className="w-4 h-4" />
           </button>
@@ -204,8 +231,8 @@ export function PageHeader({
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-5 border-b border-slate-200 mb-5">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight text-slate-900">{title}</h1>
-        {description && <p className="text-[13px] text-slate-500 mt-0.5">{description}</p>}
+        <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900">{title}</h1>
+        {description && <p className="text-base leading-relaxed text-slate-600 mt-2">{description}</p>}
       </div>
       {actions && <div className="flex items-center gap-2 flex-wrap">{actions}</div>}
     </div>

@@ -18,3 +18,5 @@ jobs:
       - run: npm ci --no-audit --no-fund
       # No deployment credentials or database secrets are provided to this job.
       - run: npm run verify
+      # Browser fixtures intercept APIs locally; no customer accounts or DB credentials.
+      - run: npm run test:browser
