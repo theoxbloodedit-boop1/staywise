@@ -14,7 +14,7 @@ export function defaultSectionOrder() {
   ];
 }
 
-export function buildDefaultSections(opts: {
+function buildExampleSections(opts: {
   orgId: string;
   propertyId: string;
   propertyName: string;
@@ -263,6 +263,27 @@ export function buildDefaultSections(opts: {
     sort_order: s.sort_order,
     content_json: JSON.stringify(s.content),
     updated_at: now,
+  }));
+}
+
+/** New real properties start as hidden drafts. The example generator above is for
+ * the explicitly guarded demo seed only, never for production property creation. */
+export function buildDefaultSections(opts: Parameters<typeof buildExampleSections>[0]) {
+  const contents: Record<string, Record<string, unknown>> = {
+    welcome: { welcomeMessage: `Welcome to ${opts.propertyName}.`, propertyIntro: '', hostName: opts.hostName, hostPhone: opts.hostPhone, hostEmail: opts.hostEmail, importantNotes: '', announcements: '' },
+    checkin: { checkInTime: opts.checkInTime || '', fullAddress: opts.address, mapLink: '', directions: '', parkingInstructions: '', keyCollection: '', smartLockCode: opts.smartLockCode ? encryptField(opts.smartLockCode) : '', lockboxInstructions: '', smartLockInstructions: '', entrySteps: [], accessRestricted: true },
+    rules: { quietHours: '', smokingPolicy: '', petPolicy: '', partyPolicy: '', wasteDisposal: '', poolPolicy: '', customRestrictions: [], requireAcknowledgment: false },
+    wifi_home: { wifiNetwork: opts.wifiNetwork, wifiPassword: opts.wifiPassword ? encryptField(opts.wifiPassword) : '', restrictWifiUntilVerified: true, acInstructions: '', heatingInstructions: '', tvStreaming: '', kitchenAppliances: '', washerDryer: '', dishwasher: '', poolSpa: '', troubleshooting: [] },
+    local_picks: { items: opts.localPicks || [] },
+    emergency: { primaryNumber: '', managerEmergencyPhone: opts.hostPhone, maintenanceEmergencyPhone: opts.emergencyPhone || '', nearestHospital: opts.hospitalName || '', hospitalAddress: '', fireProcedure: '', electricalProcedure: '', waterShutoffProcedure: '', lockoutProcedure: '', safetyNotes: '' },
+    getting_around: { airportDirections: '', publicTransit: '', taxiRideshare: '', parkingDetails: '', drivingNotes: '' },
+    checkout: { checkOutTime: opts.checkOutTime || '', keyReturn: '', wasteInstructions: '', dishwasherInstructions: '', laundryInstructions: '', lightsEquipment: '', closingChecklist: [], departureConfirmEnabled: false },
+  };
+  const titles = ['Welcome & Host Intro', 'Check-In Instructions', 'House Rules', 'Wi-Fi & Home Instructions', 'Places to Eat & Local Picks', 'Emergency Information', 'Getting Around', 'Before You Go / Check-Out'];
+  return defaultSectionOrder().map((key, index) => ({
+    id: `sec-${opts.propertyId}-${key}`, organization_id: opts.orgId, property_id: opts.propertyId,
+    section_key: key, title: titles[index], is_visible: 0, sort_order: index,
+    content_json: JSON.stringify(contents[key]), updated_at: new Date().toISOString(),
   }));
 }
 
@@ -608,7 +629,7 @@ export async function seedIfEmpty(db: DbExecutor) {
         '2026-11-15T08:00:00Z',
       ]
     );
-    for (const sec of buildDefaultSections(spec)) {
+    for (const sec of buildExampleSections(spec)) {
       await db.execute(
         `INSERT INTO guidebook_sections (id, organization_id, property_id, section_key, title, is_visible, sort_order, content_json, updated_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) ON CONFLICT (id) DO NOTHING`,

@@ -197,12 +197,12 @@ export function PropertiesPage({
             <Card key={prop.id} className="overflow-hidden flex flex-col">
               <div className="flex flex-col sm:flex-row">
                 <div className="sm:w-44 h-44 sm:h-auto shrink-0 bg-slate-100 relative">
-                  <img
+                  {prop.cover_image ? <img
                     src={prop.cover_image}
                     alt={`${prop.name} short-term rental in ${prop.city}, ${prop.state}`}
                     loading="lazy"
                     className="w-full h-full object-cover"
-                  />
+                  /> : <div className="h-full min-h-44 grid place-items-center text-xs text-slate-500">No property photo</div>}
                   <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded text-[10px] font-semibold bg-white/95 text-slate-900 shadow-xs">
                     {prop.country} · {prop.currency} · {prop.emergency_number}
                   </span>

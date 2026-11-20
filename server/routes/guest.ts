@@ -1,53 +1,28 @@
+import { verifyGuestRequest } from '../lib/guest-verification.js';
+import { projectGuestSections } from '../lib/guest-content.js';
 import { validateEvidenceReferences } from '../lib/private-media.js';
 import { Router, type Request } from 'express';
 import { db } from '../db.js';
 import {
   ah,
   computePropertyReadiness,
-  decryptCheckinContent,
-  decryptWifiContent,
   dispatchNotification,
   logAudit,
   nowIso,
-  resolveGuestVerification,
   runSafeAiAssistant,
   uid,
 } from '../domain.js';
 import { createRateLimiter } from '../security.js';
-import {
-  checkRateLimitLock,
-  extractClientIp,
-  hashRateLimitKey,
-  recordRateLimitOutcome,
-} from '../lib/rate-limit.js';
+
 import { parseFeedbackRating, sortGuidebookSections } from '../lib/guest-helpers.js';
 
 export const guestRouter = Router();
-
-function getGuestRateKey(req: Request, slug: string): string {
-  return hashRateLimitKey(extractClientIp(req), slug);
-}
-
-async function checkGuestBruteForceLock(req: Request, slug: string): Promise<{ blocked: boolean; retryAfterSec: number }> {
-  const res = await checkRateLimitLock(getGuestRateKey(req, slug));
-  return { blocked: res.blocked, retryAfterSec: res.retryAfterSec };
-}
-
-async function recordGuestCodeAttempt(req: Request, slug: string, valid: boolean, orgId?: string, propId?: string) {
-  const outcome = await recordRateLimitOutcome(getGuestRateKey(req, slug), valid);
-  if (outcome.newlyLocked && orgId && propId) {
-    await logAudit({
-      organizationId: orgId,
-      propertyId: propId,
-      actorName: 'Rate Limiter',
-      actorRole: 'Guest',
-      action: 'GUEST_CODE_BRUTEFORCE_BLOCKED',
-      entityType: 'Property',
-      entityId: propId,
-      details: `Blocked repeated invalid access code attempts on ${slug} (${outcome.failCount} attempts in 15m).`,
-    });
-  }
-}
+guestRouter.use((_req, res, next) => {
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
+  next();
+});
 
 const guestVerifyLimiter = createRateLimiter({
   windowMs: 60_000,
@@ -72,20 +47,7 @@ guestRouter.get(
     if (!prop) return res.status(404).json({ error: 'Property Welcome Book not found.' });
 
     const code = typeof req.query.code === 'string' ? req.query.code.trim() : '';
-    if (code) {
-      const lockCheck = await checkGuestBruteForceLock(req, prop.slug);
-      if (lockCheck.blocked) {
-        res.setHeader('Retry-After', String(lockCheck.retryAfterSec));
-        return res.status(429).json({
-          error: 'Too many invalid access code attempts. Please wait 15 minutes or contact your host.',
-        });
-      }
-    }
-
-    const verification = await resolveGuestVerification(prop, code);
-    if (code) {
-      await recordGuestCodeAttempt(req, prop.slug, verification.valid, prop.organization_id, prop.id);
-    }
+    const verification = await verifyGuestRequest(req, prop, code);
     const isVerified = verification.valid;
     const reservation = verification.valid ? verification.reservation : null;
 
@@ -96,38 +58,16 @@ guestRouter.get(
     );
     const orderedSections = sortGuidebookSections(sectionsRaw, guidebook?.section_order_json);
 
-    const sections = orderedSections.map((sec) => {
-      let content = JSON.parse(sec.content_json);
-      if (sec.section_key === 'checkin') {
-        content = decryptCheckinContent(content);
-        if (content.accessRestricted && !isVerified) {
-          content.smartLockCode = null;
-          content.lockboxInstructions = 'Locked — verify your active booking access code above to reveal lockbox & smart-lock details.';
-          content.smartLockInstructions = 'Smart-lock entry PIN unlocks automatically once your stay code is verified.';
-        }
-      }
-      if (sec.section_key === 'wifi_home') {
-        content = decryptWifiContent(content);
-        if (content.restrictWifiUntilVerified && !isVerified) {
-          content.wifiPassword = null;
-        }
-      }
-      return {
-        section_key: sec.section_key,
-        title: sec.title,
-        sort_order: sec.sort_order,
-        content,
-      };
-    });
+    const sections = projectGuestSections(orderedSections, isVerified);
 
     const publicProperty = {
       id: prop.id,
       slug: prop.slug,
-      name: prop.name,
+      name: isVerified ? prop.name : 'Guest Welcome Book',
       address_line: isVerified ? prop.address_line : `${prop.city}, ${prop.state}`,
       city: prop.city,
       state: prop.state,
-      postal_code: prop.postal_code,
+      postal_code: isVerified ? prop.postal_code : '',
       country: prop.country,
       timezone: prop.timezone,
       currency: prop.currency,
@@ -136,14 +76,14 @@ guestRouter.get(
       bedrooms: prop.bedrooms,
       bathrooms: prop.bathrooms,
       max_occupancy: prop.max_occupancy,
-      cover_image: prop.cover_image,
-      description: prop.description,
-      amenities: JSON.parse(prop.amenities_json || '[]'),
+      cover_image: isVerified ? prop.cover_image : '',
+      description: isVerified ? prop.description : 'Verify your active booking code to view the property guide.',
+      amenities: isVerified ? JSON.parse(prop.amenities_json || '[]') : [],
     };
 
     res.json({
       property: publicProperty,
-      guidebook: guidebook
+      guidebook: isVerified && guidebook
         ? {
             brand_name: guidebook.brand_name,
             accent_color: guidebook.accent_color,
@@ -161,7 +101,6 @@ guestRouter.get(
             check_in_date: reservation.check_in_date,
             check_out_date: reservation.check_out_date,
             guest_count: reservation.guest_count,
-            access_code: reservation.access_code,
             house_rules_acknowledged: Boolean(reservation.house_rules_acknowledged),
             check_out_status: reservation.check_out_status,
           }
@@ -181,19 +120,8 @@ guestRouter.post(
     );
     if (!prop) return res.status(404).json({ error: 'Property not found.' });
 
-    const lockCheck = await checkGuestBruteForceLock(req, prop.slug);
-    if (lockCheck.blocked) {
-      res.setHeader('Retry-After', String(lockCheck.retryAfterSec));
-      return res.status(429).json({
-        error: 'Too many invalid access code attempts. Please wait 15 minutes or contact your host.',
-      });
-    }
-
     const { code } = req.body || {};
-    const verification = await resolveGuestVerification(prop, code);
-    if (code) {
-      await recordGuestCodeAttempt(req, prop.slug, verification.valid, prop.organization_id, prop.id);
-    }
+    const verification = await verifyGuestRequest(req, prop, code);
     if (!verification.valid) {
       const messages: Record<string, string> = {
         missing: 'Please enter your stay access code.',
@@ -214,10 +142,10 @@ guestRouter.post(
       action: 'GUEST_ACCESS_VERIFIED',
       entityType: 'Reservation',
       entityId: reservation.id,
-      details: `Guest verified time-bound access code ${reservation.access_code} for ${prop.name}.`,
+      details: `Guest verified time-bound access for ${prop.name}; booking code not recorded.`,
     });
 
-    res.json({ ok: true, accessCode: reservation.access_code });
+    res.json({ ok: true });
   })
 );
 
@@ -231,7 +159,7 @@ guestRouter.post(
     );
     if (!prop) return res.status(404).json({ error: 'Property not found.' });
     const { code } = req.body || {};
-    const verification = await resolveGuestVerification(prop, code);
+    const verification = await verifyGuestRequest(req, prop, code);
     if (!verification.valid) return res.status(401).json({ error: 'Verify an active booking code first.' });
 
     const reservation = verification.reservation;
@@ -260,7 +188,7 @@ guestRouter.post(
     );
     if (!prop) return res.status(404).json({ error: 'Property not found.' });
     const { code } = req.body || {};
-    const verification = await resolveGuestVerification(prop, code);
+    const verification = await verifyGuestRequest(req, prop, code);
     if (!verification.valid) return res.status(401).json({ error: 'Verify an active booking code first.' });
 
     const reservation = verification.reservation;
@@ -322,16 +250,16 @@ guestRouter.post(
     if (org?.ai_monthly_allowance && usedThisMonth >= org.ai_monthly_allowance) {
       return res.json({
         id: uid('ai'),
-        answer: `Our automated concierge has reached its monthly inquiry limit for this workspace. I’ve routed your question straight to the local host team for human assistance.`,
+        answer: `Guide search has reached its monthly inquiry limit. Please contact your host directly; this question has not been forwarded.`,
         sources: [],
-        confidence: 'Escalated — Allowance Reached',
-        escalated: true,
+        confidence: 'Unavailable — Allowance Reached',
+        escalated: false,
         knowledgeGap: false,
         emergencyAlert: false,
       });
     }
 
-    const verification = await resolveGuestVerification(prop, code);
+    const verification = await verifyGuestRequest(req, prop, code);
     const reservation = verification.valid ? verification.reservation : null;
 
     const result = await runSafeAiAssistant({
@@ -369,13 +297,13 @@ guestRouter.post(
         recipientName: 'Concierge & Property Manager',
         urgency: result.emergencyAlert ? 'Critical' : 'High',
         title: result.emergencyAlert
-          ? `EMERGENCY AI ESCALATION: ${prop.name}`
-          : `AI Guest Escalation / Knowledge Gap: ${prop.name}`,
+          ? `URGENT GUIDE QUESTION: ${prop.name}`
+          : `Guide Question / Missing Information: ${prop.name}`,
         body: `Guest asked: "${String(question).trim()}"`,
       });
     }
 
-    res.json({ id: convId, ...result });
+    res.json({ id: convId, ...result, answerMode: 'keyword-guide-search', externalDelivery: false });
   })
 );
 
@@ -394,7 +322,7 @@ guestRouter.post(
       return res.status(400).json({ error: 'Subject and description are required.' });
     }
 
-    const verification = await resolveGuestVerification(prop, b.code);
+    const verification = await verifyGuestRequest(req, prop, b.code);
     const reservation = verification.valid ? verification.reservation : null;
     const supId = uid('sup');
     const now = nowIso();
@@ -505,7 +433,7 @@ guestRouter.get(
     if (!prop) return res.status(404).json({ error: 'Not found.' });
 
     const code = typeof req.query.code === 'string' ? req.query.code : '';
-    const verification = await resolveGuestVerification(prop, code);
+    const verification = await verifyGuestRequest(req, prop, code);
     if (!verification.valid) {
       return res.json([]);
     }
@@ -548,7 +476,7 @@ guestRouter.post(
       return res.status(400).json({ error: 'All ratings must be whole numbers between 1 and 5.' });
     }
 
-    const verification = await resolveGuestVerification(prop, b.code);
+    const verification = await verifyGuestRequest(req, prop, b.code);
     const reservation = verification.valid ? verification.reservation : null;
     const id = uid('fb');
 

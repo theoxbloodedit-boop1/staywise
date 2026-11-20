@@ -1,3 +1,4 @@
+import { projectGuestSections } from './lib/guest-content.js';
 import { controlPrincipal } from './lib/control-center.js';
 import { hasPropertyScope, isKnownOperationalRole, parseAssignments } from './lib/authorization.js';
 import crypto from 'crypto';
@@ -61,14 +62,15 @@ function addDaysToYmd(ymd: string, deltaDays: number): string {
 
 export async function resolveGuestVerification(
   prop: { id: string; timezone?: string },
-  code?: string
+  code?: string,
+  database: DbExecutor = db
 ): Promise<
   | { valid: true; reservation: any }
   | { valid: false; reason: 'missing' | 'invalid' | 'cancelled' | 'not_yet_active' | 'expired' }
 > {
   if (!code || !code.trim()) return { valid: false, reason: 'missing' };
 
-  const reservation = await db.queryOne(
+  const reservation = await database.queryOne(
     'SELECT * FROM reservations WHERE property_id = $1 AND UPPER(access_code) = UPPER($2)',
     [prop.id, code.trim()]
   );
@@ -284,13 +286,13 @@ export async function dispatchNotification(opts: {
       id,
       opts.organizationId,
       opts.propertyId || null,
-      opts.channel,
+      'In-App',
       opts.recipientRole,
       opts.recipientName,
       opts.urgency,
       opts.title,
       opts.body,
-      'Delivered',
+      'Available In-App',
       nowIso(),
     ]
   );
@@ -460,18 +462,19 @@ export async function runSafeAiAssistant(opts: {
     };
   }
 
+  if (!opts.isVerifiedGuest) {
+    return {
+      answer: 'Verify your active booking code before searching the private property guide. If anyone is in immediate danger, contact the local emergency services.',
+      sources: [], confidence: 'Restricted — Verification Required', escalated: false,
+      knowledgeGap: false, emergencyAlert: false,
+    };
+  }
   const sectionsRows = await db.query<any>(
-    'SELECT section_key, title, content_json, is_visible FROM guidebook_sections WHERE property_id = $1',
+    'SELECT section_key, title, content_json, is_visible FROM guidebook_sections WHERE property_id = $1 AND is_visible = 1',
     [opts.propertyId]
   );
-
   const sections: Record<string, Record<string, any>> = {};
-  for (const r of sectionsRows) {
-    let parsed = JSON.parse(r.content_json);
-    if (r.section_key === 'checkin') parsed = decryptCheckinContent(parsed);
-    if (r.section_key === 'wifi_home') parsed = decryptWifiContent(parsed);
-    sections[r.section_key] = parsed;
-  }
+  for (const row of projectGuestSections(sectionsRows, true)) sections[row.section_key] = row.content;
 
   const q = opts.question.toLowerCase().trim();
   const emergency = sections.emergency || {};
@@ -515,17 +518,17 @@ export async function runSafeAiAssistant(opts: {
     const mgrPhone = emergency.managerEmergencyPhone || welcome.hostPhone || 'Host line on file';
     const extraLines: string[] = [];
     if (hasWord(['water', 'leak', 'flood']) && emergency.waterShutoffProcedure) {
-      extraLines.push(`Verified shutoff info: ${emergency.waterShutoffProcedure}`);
+      extraLines.push(`Host guide shutoff info: ${emergency.waterShutoffProcedure}`);
     }
     if (hasWord(['lock', 'locked', 'lockout']) && emergency.lockoutProcedure) {
-      extraLines.push(`Verified lockout procedure: ${emergency.lockoutProcedure}`);
+      extraLines.push(`Host guide lockout procedure: ${emergency.lockoutProcedure}`);
     }
     if (hasWord(['fire', 'smoke']) && emergency.fireProcedure) {
-      extraLines.push(`Verified fire procedure: ${emergency.fireProcedure}`);
+      extraLines.push(`Host guide fire procedure: ${emergency.fireProcedure}`);
     }
 
     return {
-      answer: `HIGH-PRIORITY SAFETY & ESCALATION NOTICE for ${prop.name}: If anyone is in immediate danger, call ${num} right away. For urgent property assistance, contact the 24/7 Property Manager Emergency line at ${mgrPhone}. ${extraLines.join(' ')} I have flagged this conversation for immediate human team escalation rather than offering unverified repair advice.`,
+      answer: `HIGH-PRIORITY SAFETY & ESCALATION NOTICE for ${prop.name}: If anyone is in immediate danger, call ${num} right away. For urgent property assistance, contact the host contact listed in the guide at ${mgrPhone}. ${extraLines.join(' ')} This conversation is recorded for internal team review. No email or SMS is sent; contact your host or emergency services directly when urgent.`,
       sources: ['Emergency Information'],
       confidence: 'Escalated — Safety Protocol',
       escalated: true,
@@ -589,7 +592,7 @@ export async function runSafeAiAssistant(opts: {
     sources.add('Check-In Instructions');
     sources.add('Before You Go / Check-Out');
     return {
-      answer: `Standard check-in for ${prop.name} begins at ${checkin.checkInTime || '4:00 PM'} and check-out is at ${checkout.checkOutTime || '11:00 AM'}. Custom timing (such as early arrival, late departure, or luggage drop-off) requires turnover clearance and isn’t auto-approved in the Welcome Book, so I’ve escalated your request directly to the ${welcome.hostName || 'property'} team for confirmation.`,
+      answer: `Standard check-in for ${prop.name} begins at ${checkin.checkInTime || 'not configured'} and check-out is at ${checkout.checkOutTime || 'not configured'}. Custom timing (such as early arrival, late departure, or luggage drop-off) requires turnover clearance and isn’t auto-approved in the Welcome Book, so your question is recorded for internal team review, not automatically approved. No email or SMS is sent.`,
       sources: Array.from(sources),
       confidence: 'Escalated — Host Approval Required',
       escalated: true,
@@ -598,7 +601,7 @@ export async function runSafeAiAssistant(opts: {
     };
   }
 
-  if (hasWord(['wifi', 'wi-fi', 'internet', 'password', 'network'])) {
+  if (sections.wifi_home && hasWord(['wifi', 'wi-fi', 'internet', 'password', 'network'])) {
     sources.add('Wi-Fi & Home Instructions');
     if (opts.isVerifiedGuest || !wifi.restrictWifiUntilVerified) {
       matchedParts.push(`Wi-Fi Network: "${wifi.wifiNetwork}" · Password: "${wifi.wifiPassword}".`);
@@ -607,7 +610,7 @@ export async function runSafeAiAssistant(opts: {
     }
   }
 
-  if (hasWord(['check-in', 'check in', 'arrive', 'arrival', 'key', 'keys', 'lock', 'code', 'pin', 'entry'])) {
+  if (sections.checkin && hasWord(['check-in', 'check in', 'arrive', 'arrival', 'key', 'keys', 'lock', 'code', 'pin', 'entry'])) {
     sources.add('Check-In Instructions');
     matchedParts.push(`Check-in starts at ${checkin.checkInTime}. ${checkin.smartLockInstructions}`);
     if (opts.isVerifiedGuest) {
@@ -615,57 +618,57 @@ export async function runSafeAiAssistant(opts: {
     }
   }
 
-  if (hasWord(['park', 'parking', 'car', 'garage', 'driveway', 'ev'])) {
+  if ((sections.checkin || sections.getting_around) && hasWord(['park', 'parking', 'car', 'garage', 'driveway', 'ev'])) {
     sources.add('Check-In Instructions');
     sources.add('Getting Around');
     matchedParts.push(`Parking: ${checkin.parkingInstructions} ${gettingAround.parkingDetails || ''}`.trim());
   }
 
-  if (hasWord(['pet', 'pets', 'dog', 'dogs', 'cat', 'cats'])) {
+  if (sections.rules && hasWord(['pet', 'pets', 'dog', 'dogs', 'cat', 'cats'])) {
     sources.add('House Rules');
     matchedParts.push(`Pet policy: ${rules.petPolicy}`);
   }
-  if (hasWord(['smoke', 'smoking', 'vape', 'vaping'])) {
+  if (sections.rules && hasWord(['smoke', 'smoking', 'vape', 'vaping'])) {
     sources.add('House Rules');
     matchedParts.push(`Smoking policy: ${rules.smokingPolicy}`);
   }
-  if (hasWord(['quiet', 'noise', 'party', 'parties', 'visitor', 'visitors'])) {
+  if (sections.rules && hasWord(['quiet', 'noise', 'party', 'parties', 'visitor', 'visitors'])) {
     sources.add('House Rules');
     matchedParts.push(`Quiet hours: ${rules.quietHours}. Party policy: ${rules.partyPolicy}`);
   }
-  if (hasWord(['ac', 'air conditioning', 'thermostat', 'cooling', 'heat', 'heating', 'temperature'])) {
+  if (sections.wifi_home && hasWord(['ac', 'air conditioning', 'thermostat', 'cooling', 'heat', 'heating', 'temperature'])) {
     sources.add('Wi-Fi & Home Instructions');
     matchedParts.push(`Climate control: ${wifi.acInstructions} ${wifi.heatingInstructions}`);
   }
-  if (hasWord(['tv', 'television', 'streaming', 'netflix', 'apple tv'])) {
+  if (sections.wifi_home && hasWord(['tv', 'television', 'streaming', 'netflix', 'apple tv'])) {
     sources.add('Wi-Fi & Home Instructions');
     matchedParts.push(`TV & Streaming: ${wifi.tvStreaming}`);
   }
-  if (hasWord(['pool', 'spa', 'hot tub'])) {
+  if (sections.wifi_home && hasWord(['pool', 'spa', 'hot tub'])) {
     sources.add('Wi-Fi & Home Instructions');
     matchedParts.push(`Pool & Spa: ${wifi.poolSpa} (${rules.poolPolicy})`);
   }
-  if (hasWord(['washer', 'dryer', 'laundry'])) {
+  if (sections.wifi_home && hasWord(['washer', 'dryer', 'laundry'])) {
     sources.add('Wi-Fi & Home Instructions');
     matchedParts.push(`Laundry: ${wifi.washerDryer}`);
   }
-  if (hasWord(['dishwasher', 'kitchen', 'coffee', 'espresso', 'cook', 'cooking'])) {
+  if (sections.wifi_home && hasWord(['dishwasher', 'kitchen', 'coffee', 'espresso', 'cook', 'cooking'])) {
     sources.add('Wi-Fi & Home Instructions');
     matchedParts.push(`Kitchen & Appliances: ${wifi.kitchenAppliances} Dishwasher: ${wifi.dishwasher}`);
   }
-  if (hasWord(['check-out', 'check out', 'checkout', 'depart', 'departure', 'leave', 'trash', 'bin', 'bins', 'rubbish'])) {
+  if (sections.checkout && hasWord(['check-out', 'check out', 'checkout', 'depart', 'departure', 'leave', 'trash', 'bin', 'bins', 'rubbish'])) {
     sources.add('Before You Go / Check-Out');
     matchedParts.push(`Check-out is at ${checkout.checkOutTime}. ${checkout.keyReturn} Waste: ${checkout.wasteInstructions}`);
   }
-  if (hasWord(['eat', 'food', 'restaurant', 'restaurants', 'dinner', 'cafe', 'cafes', 'coffee', 'grocery', 'supermarket', 'pharmacy'])) {
+  if (sections.local_picks && hasWord(['eat', 'food', 'restaurant', 'restaurants', 'dinner', 'cafe', 'cafes', 'coffee', 'grocery', 'supermarket', 'pharmacy'])) {
     sources.add('Places to Eat & Local Picks');
     const items = (localPicks.items || []) as Array<any>;
     if (items.length > 0) {
       const top = items.slice(0, 3).map((i) => `${i.name} (${i.category} — ${i.description})`).join(' · ');
-      matchedParts.push(`Verified local picks near ${prop.city}: ${top}`);
+      matchedParts.push(`Host guide local picks near ${prop.city}: ${top}`);
     }
   }
-  if (hasWord(['airport', 'uber', 'taxi', 'transit', 'bus', 'train'])) {
+  if (sections.getting_around && hasWord(['airport', 'uber', 'taxi', 'transit', 'bus', 'train'])) {
     sources.add('Getting Around');
     matchedParts.push(`Getting Around: ${gettingAround.airportDirections} ${gettingAround.taxiRideshare}`);
   }
@@ -696,7 +699,7 @@ export async function runSafeAiAssistant(opts: {
     return {
       answer: matchedParts.join(' '),
       sources: Array.from(sources),
-      confidence: 'Verified',
+      confidence: 'Guide content — not independently verified',
       escalated: false,
       knowledgeGap: false,
       emergencyAlert: false,
@@ -704,7 +707,7 @@ export async function runSafeAiAssistant(opts: {
   }
 
   return {
-    answer: `I don’t have verified information on file in ${prop.name}’s Welcome Book to answer "${opts.question}". Rather than guessing, I’ve logged this question for the ${welcome.hostName || 'property'} team and flagged it as a knowledge gap so a team member can confirm directly.`,
+    answer: `I don’t have verified information on file in ${prop.name}’s Welcome Book to answer "${opts.question}". Rather than guessing, this question is recorded in the internal support console. No email or SMS is sent; contact your host directly if needed.`,
     sources: [],
     confidence: 'Unavailable — Escalated',
     escalated: true,

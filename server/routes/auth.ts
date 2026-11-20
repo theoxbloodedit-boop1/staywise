@@ -4,10 +4,16 @@ import { parseAssignments, isKnownOperationalRole, AuthorizationError } from '..
 import { Router } from 'express';
 import { db } from '../db.js';
 import { ah, getActor, isPlatformAdminEmail, logAudit, nowIso, requireAuth, resolveNeonJwt, uid } from '../domain.js';
-import { createRateLimiter, getNeonAuthBaseUrl } from '../security.js';
+import { createRateLimiter, getNeonAuthBaseUrl, getNeonAuthConfigurationStatus, diagnoseNeonSession } from '../security.js';
 import { DEFAULT_PLAN_TIER, getPlanSpec, parsePlanTier } from '../../src/lib/plans.js';
 
 export const authRouter = Router();
+
+// Safe operator preflight; no account, credential or token contents are returned.
+authRouter.get('/configuration', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json(getNeonAuthConfigurationStatus());
+});
 
 const authLimiter = createRateLimiter({
   windowMs: 60_000,
@@ -15,15 +21,28 @@ const authLimiter = createRateLimiter({
   prefix: 'auth',
 });
 
+authRouter.post('/session-diagnostic', authLimiter, ah(async (req, res) => {
+  res.setHeader('Cache-Control', 'private, no-store');
+  const header = req.headers.authorization;
+  const token = typeof header === 'string' && header.startsWith('Bearer ') ? header.slice(7) : undefined;
+  res.json(await diagnoseNeonSession(token));
+}));
+
 authRouter.get(
   '/context',
   ah(async (req, res) => {
+    const configuration = getNeonAuthConfigurationStatus();
+    if (!configuration.configured) {
+      res.setHeader('Cache-Control', 'no-store');
+      return res.status(503).json({ error: 'Authentication configuration incomplete.', code: 'AUTH_CONFIGURATION_INCOMPLETE', missing: configuration.missing });
+    }
     const neonUser = await resolveNeonJwt(req);
     const neonAuthUrl = getNeonAuthBaseUrl();
 
     if (!neonUser || !neonUser.emailVerified) {
       return res.json({
         authenticated: false,
+        emailVerificationRequired: Boolean(neonUser && !neonUser.emailVerified),
         needsOnboarding: false,
         user: null,
         neonUser: null,
@@ -153,6 +172,13 @@ authRouter.post(
   '/onboard',
   authLimiter,
   ah(async (req, res) => {
+    const configuration = getNeonAuthConfigurationStatus();
+    if (!configuration.configured) {
+      return res.status(503).json({
+        code: 'AUTH_CONFIGURATION_INCOMPLETE',
+        error: `Sign-in is temporarily unavailable because server authentication setup is incomplete (${configuration.missing.join(', ')}). Your existing account has not been deleted.`,
+      });
+    }
     const neonUser = await resolveNeonJwt(req);
     if (!neonUser || !neonUser.emailVerified) {
       return res.status(401).json({ error: 'Valid Neon Auth session required before creating a workspace.' });
@@ -205,18 +231,8 @@ authRouter.post(
       AU: 'AUD',
       INTL: 'USD',
     };
-    const PHONE_BY_REGION: Record<string, string> = {
-      US: '+1 (555) 010-0100',
-      CA: '+1 (416) 555-0100',
-      GB: '+44 20 7946 0100',
-      EU: '+33 1 42 68 55 00',
-      AU: '+61 400 000 000',
-      INTL: '+1 (555) 010-0100',
-    };
     const rawCountry = String(country || 'US').toUpperCase();
     const safeCountry = CURRENCY_BY_REGION[rawCountry] ? rawCountry : 'US';
-    const currency = CURRENCY_BY_REGION[safeCountry];
-    const invoiceNum = `INV-${new Date().getUTCFullYear()}-${Math.floor(1000 + Math.random() * 8999)}`;
 
     let userId = '';
 
@@ -252,7 +268,7 @@ authRouter.post(
           String(orgName).trim(),
           slug,
           neonUser.email,
-          contactPhone || PHONE_BY_REGION[safeCountry],
+          contactPhone || '',
           safeCountry,
           chosenPlan,
           limit,
@@ -269,27 +285,14 @@ authRouter.post(
         [memId, orgId, userId, now]
       );
 
-      await tx.execute(
-        `INSERT INTO payment_records (id, organization_id, plan_tier, amount_cents, tax_cents, currency, status, invoice_number, period_label, created_at)
-         VALUES ($1, $2, $3, 0, 0, $4, 'Early Access ($0)', $5, $6, $7)`,
-        [
-          uid('pay'),
-          orgId,
-          chosenPlan,
-          currency,
-          invoiceNum,
-          new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) + ' Free Full Access',
-          now,
-        ]
-      );
 
       await tx.execute(
         `INSERT INTO automation_rules (id, organization_id, name, trigger_event, channel, recipient_role, enabled, quiet_hours_respected, description)
-         VALUES ($1, $2, 'Critical Incident Alert', 'Critical incident', 'SMS + Email + In-App', 'Organization Owner', 1, 1, $3)`,
+         VALUES ($1, $2, 'Critical Incident Alert', 'Critical incident', 'In-App', 'Organization Owner', 1, 1, $3)`,
         [
           uid('aut'),
           orgId,
-          'Immediately alerts property owner and assigned technician when a critical issue occurs.',
+          'Creates an internal notification for a critical incident. No email or SMS is sent.',
         ]
       );
     });

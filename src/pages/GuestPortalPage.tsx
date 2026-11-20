@@ -463,14 +463,14 @@ export function GuestPortalPage({ slug }: { slug: string }) {
                 className="w-full h-full object-cover opacity-85"
               />
             </picture>
-          ) : (
+          ) : coverSrc ? (
             <img
               src={coverSrc}
               alt={`${guidebook?.brand_name || property.name} welcome book cover photo`}
               {...({ fetchpriority: 'high' } as any)}
               className="w-full h-full object-cover opacity-85"
             />
-          )}
+          ) : <div className="w-full h-full bg-slate-800" aria-hidden="true" />}
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-900/30 to-transparent" />
           <div className="absolute top-3.5 left-4 right-4 flex items-center justify-between gap-2">
             <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-white/95 text-slate-900">
@@ -499,7 +499,7 @@ export function GuestPortalPage({ slug }: { slug: string }) {
                 <Unlock className="w-4 h-4 text-emerald-600 shrink-0" />
                 <div>
                   <div className="font-semibold text-slate-900">
-                    Verified Stay: {reservation.guest_name} ({reservation.access_code})
+                    Verified Stay: {reservation.guest_name}
                   </div>
                   <div className="text-[11px] text-slate-500">
                     Smart-lock PIN, lockbox details &amp; Wi-Fi password unlocked
@@ -558,6 +558,9 @@ export function GuestPortalPage({ slug }: { slug: string }) {
                   )}
                 </div>
 
+                {sections.length === 0 && <p className="text-sm text-slate-600 p-3">
+                  {isVerified ? 'No guide sections have been reviewed and made visible yet. Contact your host for confirmed property information.' : 'Verify your active booking code to view the private property guide. No address or guide content is shown before verification.'}
+                </p>}
                 {!searchQuery.trim() && sections.length > 0 && (
                   <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
                     {sections.map((sec) => {
@@ -1184,7 +1187,7 @@ export function GuestPortalPage({ slug }: { slug: string }) {
         <nav className="sticky bottom-0 bg-white border-t border-slate-200 grid grid-cols-4 text-[11px] font-medium z-30">
           {[
             { id: 'guide' as const, label: 'Welcome Book', icon: Sparkles },
-            { id: 'ai' as const, label: 'AI Assistant', icon: Bot },
+            { id: 'ai' as const, label: 'Guide Search', icon: Bot },
             { id: 'support' as const, label: 'Help & Issues', icon: LifeBuoy },
             { id: 'feedback' as const, label: 'Feedback', icon: MessageSquareHeart },
           ].map((item) => {

@@ -1,3 +1,4 @@
+import { encodeEvidenceRequest, prepareEvidencePhoto } from './evidence-upload';
 import { getNeonJwtToken } from './neonAuth';
 import type { SessionContext } from './types';
 
@@ -109,22 +110,21 @@ export async function uploadEvidencePhoto(
   guestAuth?: { slug: string; code: string },
   propertyId?: string
 ): Promise<string> {
+  const preparedPhoto = await prepareEvidencePhoto(dataUrl);
+  const body = encodeEvidenceRequest({
+    dataUrl: preparedPhoto, filename, category: filename, property_id: propertyId,
+    ...(guestAuth ? { slug: guestAuth.slug, code: guestAuth.code } : {}),
+  });
   const headers = await buildAuthHeaders();
   const res = await fetch('/api/uploads', {
     method: 'POST',
     credentials: 'include',
     headers,
-    body: JSON.stringify({
-      dataUrl,
-      filename,
-      category: filename,
-      property_id: propertyId,
-      ...(guestAuth ? { slug: guestAuth.slug, code: guestAuth.code } : {}),
-    }),
+    body,
   });
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(data.error || 'Photo upload failed.');
+    throw new Error(res.status === 413 ? 'Photo too large. Choose a smaller photo and retry.' : data.error || 'Photo upload failed. Please retry.');
   }
   return data.media_id as string;
 }

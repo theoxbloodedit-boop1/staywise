@@ -386,8 +386,9 @@ adminRouter.get(
     ]);
 
     res.json({
-      rules: rules.map((r) => ({ ...r, enabled: Boolean(r.enabled), quiet_hours_respected: Boolean(r.quiet_hours_respected) })),
-      notifications: notifications.filter((n) => !n.property_id || canAccessProperty(actor, n.property_id)),
+      deliveryCapabilities: { inApp: true, email: false, sms: false },
+      rules: rules.map((r) => ({ ...r, channel: 'In-App', description: 'Internal notification only. Email and SMS are not delivered.', enabled: Boolean(r.enabled), quiet_hours_respected: Boolean(r.quiet_hours_respected) })),
+      notifications: notifications.filter((n) => !n.property_id || canAccessProperty(actor, n.property_id)).map(n => ({ ...n, channel: 'In-App' })),
     });
   })
 );
@@ -554,7 +555,9 @@ adminRouter.get(
       activePropertiesCount,
       aiUsedThisMonth,
       aiMonthlyAllowance: org.ai_monthly_allowance || 500,
-      invoices,
+      invoices: invoices.filter((record: any) => record.status !== 'Early Access ($0)'),
+      billingMode: 'free-access',
+      paymentCollectionEnabled: false,
     });
   })
 );
@@ -585,10 +588,6 @@ adminRouter.post(
     }
 
     const now = nowIso();
-    const CURRENCY_MAP: Record<string, string> = { US: 'USD', CA: 'CAD', GB: 'GBP', EU: 'EUR', AU: 'AUD', INTL: 'USD' };
-    const currency = CURRENCY_MAP[org.default_country] || 'USD';
-    const invoiceNum = `INV-${new Date().getUTCFullYear()}-${Math.floor(1000 + Math.random() * 8999)}`;
-
     await db.transaction(async (tx) => {
       await tx.execute('UPDATE organizations SET plan_tier = $1, property_limit = $2, ai_monthly_allowance = $3 WHERE id = $4', [
         chosenPlan,
@@ -597,19 +596,6 @@ adminRouter.post(
         actor.organizationId,
       ]);
 
-      await tx.execute(
-        `INSERT INTO payment_records (id, organization_id, plan_tier, amount_cents, tax_cents, currency, status, invoice_number, period_label, created_at)
-         VALUES ($1, $2, $3, 0, 0, $4, 'Early Access ($0)', $5, $6, $7)`,
-        [
-          uid('pay'),
-          actor.organizationId,
-          chosenPlan,
-          currency,
-          invoiceNum,
-          new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) + ' Free Full Access',
-          now,
-        ]
-      );
     });
 
     await logAudit({
@@ -619,7 +605,7 @@ adminRouter.post(
       action: 'BILLING_PLAN_CHANGED',
       entityType: 'Organization',
       entityId: actor.organizationId,
-      details: `Switched workspace tier to ${chosenPlan} (up to ${spec.propertyLimit} properties, ${spec.aiMonthlyAllowance} AI queries/mo, $0 Free Access) · Ref ${invoiceNum}.`,
+      details: `Switched workspace tier to ${chosenPlan} (up to ${spec.propertyLimit} properties, ${spec.aiMonthlyAllowance} AI queries/mo, $0 Free Access); no payment collected or invoice issued.`,
     });
 
     res.json(await db.queryOne('SELECT * FROM organizations WHERE id = $1', [actor.organizationId]));

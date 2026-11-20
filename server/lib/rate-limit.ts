@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import type { Request } from 'express';
-import { db } from '../db.js';
+import { db, type DbExecutor } from '../db.js';
 
 export const GUEST_VERIFY_MAX_FAILURES = 8;
 export const GUEST_VERIFY_WINDOW_MS = 15 * 60_000;
@@ -25,16 +25,16 @@ export interface AttemptStore {
   remove(key: string): Promise<void>;
 }
 
-export function createPgAttemptStore(): AttemptStore {
+export function createPgAttemptStore(database: DbExecutor = db): AttemptStore {
   return {
     async get(key) {
-      return db.queryOne<AttemptRecord>(
+      return database.queryOne<AttemptRecord>(
         'SELECT fail_count, window_start, locked_until FROM guest_verify_attempts WHERE ip_slug = $1',
         [key]
       );
     },
     async upsert(key, record) {
-      await db.execute(
+      await database.execute(
         `INSERT INTO guest_verify_attempts (ip_slug, fail_count, window_start, locked_until)
          VALUES ($1, $2, $3, $4)
          ON CONFLICT (ip_slug) DO UPDATE
@@ -43,7 +43,7 @@ export function createPgAttemptStore(): AttemptStore {
       );
     },
     async remove(key) {
-      await db.execute('DELETE FROM guest_verify_attempts WHERE ip_slug = $1', [key]);
+      await database.execute('DELETE FROM guest_verify_attempts WHERE ip_slug = $1', [key]);
     },
   };
 }

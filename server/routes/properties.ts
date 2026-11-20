@@ -83,7 +83,7 @@ propertiesRouter.post(
     const tempUnit = body.temp_unit || preset.tempUnit;
     const emergencyNumber = body.emergency_number || preset.emergency;
     const timezone = body.timezone || preset.tz;
-    const coverImage = body.cover_image || preset.img;
+    const coverImage = body.cover_image || '';
 
     const propId = uid('prop');
     const slug =
@@ -119,10 +119,10 @@ propertiesRouter.post(
           Number(body.bathrooms || 2),
           Number(body.max_occupancy || 4),
           coverImage,
-          body.description || 'Thoughtfully prepared short-term rental with verified digital guestbook.',
-          JSON.stringify(body.amenities || ['High-Speed Wi-Fi', 'Smart Lock', 'Air Conditioning', 'Full Kitchen']),
-          body.parking_info || 'Driveway parking available.',
-          body.access_summary || 'Smart keypad entry with stay-specific PIN.',
+          body.description || '',
+          JSON.stringify(body.amenities || []),
+          body.parking_info || '',
+          body.access_summary || '',
           body.emergency_notes || `Emergency services: ${emergencyNumber}.`,
           body.internal_notes || '',
           now,
@@ -154,9 +154,9 @@ propertiesRouter.post(
         hostName: org.name,
         hostPhone: org.contact_phone,
         hostEmail: org.contact_email,
-        wifiNetwork: body.wifi_network || `${String(body.name).replace(/[^A-Za-z0-9]/g, '').slice(0, 12)}_Guest`,
-        wifiPassword: body.wifi_password || 'Staywise2026!',
-        smartLockCode: String(Math.floor(100000 + Math.random() * 899999)),
+        wifiNetwork: body.wifi_network || '',
+        wifiPassword: body.wifi_password || '',
+        smartLockCode: '',
       });
 
       for (const s of sections) {

@@ -1,3 +1,4 @@
+import { verifyGuestRequest } from './lib/guest-verification.js';
 import { AuthorizationError } from './lib/authorization.js';
 import { FieldEncryptionError } from './lib/field-encryption.js';
 import 'dotenv/config';
@@ -5,7 +6,7 @@ import express from 'express';
 import compression from 'compression';
 import helmet from 'helmet';
 import { db, ensureDbReady, isDatabaseConfigured } from './db.js';
-import { ah, isOperationalRole, resolveGuestVerification, resolveSessionActor } from './domain.js';
+import { ah, isOperationalRole, resolveSessionActor } from './domain.js';
 import { type MediaPrincipal } from './lib/private-media.js';
 import { createMediaRouter } from './routes/media.js';
 import { createRateLimiter, getNeonAuthBaseUrl } from './security.js';
@@ -72,7 +73,7 @@ app.use((_req, res, next) => {
 });
 
 app.use(compression());
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '4mb' }));
 
 // Global gentle API rate limit
 const apiLimiter = createRateLimiter({
@@ -126,7 +127,7 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
-// Ensure Neon PostgreSQL schema & initial seed exist on first API call
+// Connectivity only. Schema changes and demo seeding are explicit operator actions.
 app.use(
   '/api',
   ah(async (req, res, next) => {
@@ -150,7 +151,7 @@ async function resolveMediaPrincipal(req: express.Request): Promise<MediaPrincip
   if (typeof slug !== 'string' || typeof code !== 'string') throw new AuthorizationError(403, 'MEDIA_AUTH_REQUIRED');
   const prop = await db.queryOne<any>('SELECT id,organization_id,timezone FROM properties WHERE slug=$1 AND archived=0',[slug]);
   if (!prop) throw new AuthorizationError(404,'MEDIA_NOT_FOUND');
-  const verified = await resolveGuestVerification(prop,code);
+  const verified = await verifyGuestRequest(req,prop,code);
   if (!verified.valid) throw new AuthorizationError(403,'MEDIA_AUTH_REQUIRED');
   return { guest: { organizationId:prop.organization_id,propertyId:prop.id,reservationId:verified.reservation.id } };
 }
@@ -258,12 +259,15 @@ if (process.env.VERCEL === '1') {
 // Structured JSON error handler
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   if (err?.type === 'entity.too.large') {
-    return res.status(413).json({ error: 'Request payload too large (max 10 MB).' });
+    return res.status(413).json({ error: 'Photo or request too large (max 4 MB). Resize the photo and retry.' });
   }
   if (err instanceof SyntaxError && 'body' in err) {
     return res.status(400).json({ error: 'Malformed JSON request body.' });
   }
-  if (err instanceof AuthorizationError) return res.status(err.status).json({ error: err.message, code: err.code });
+  if (err instanceof AuthorizationError) {
+    if (err.retryAfterSec) res.setHeader('Retry-After', String(err.retryAfterSec));
+    return res.status(err.status).json({ error: err.status === 429 ? 'Too many invalid booking-code attempts. Please wait and retry.' : err.message, code: err.code });
+  }
   if (err instanceof FieldEncryptionError) {
     return res.status(503).json({ error: err.message, code: err.code });
   }

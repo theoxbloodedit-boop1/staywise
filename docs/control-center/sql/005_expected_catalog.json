@@ -1,0 +1,1072 @@
+[
+  {
+    "kind": "column",
+    "name": "admin_announcements.approved_by",
+    "definition": "text|notnull=false|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_announcements.author_id",
+    "definition": "text|notnull=true|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_announcements.body",
+    "definition": "text|notnull=true|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_announcements.created_at",
+    "definition": "timestamp with time zone|notnull=true|default=now()"
+  },
+  {
+    "kind": "column",
+    "name": "admin_announcements.id",
+    "definition": "text|notnull=true|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_announcements.organization_id",
+    "definition": "text|notnull=true|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_announcements.published_at",
+    "definition": "timestamp with time zone|notnull=false|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_announcements.status",
+    "definition": "text|notnull=true|default='Draft'::text"
+  },
+  {
+    "kind": "column",
+    "name": "admin_announcements.title",
+    "definition": "text|notnull=true|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_announcements.version",
+    "definition": "integer|notnull=true|default=1"
+  },
+  {
+    "kind": "column",
+    "name": "admin_audit_logs.action",
+    "definition": "text|notnull=true|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_audit_logs.administrator_id",
+    "definition": "text|notnull=false|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_audit_logs.changes_json",
+    "definition": "jsonb|notnull=true|default='{}'::jsonb"
+  },
+  {
+    "kind": "column",
+    "name": "admin_audit_logs.created_at",
+    "definition": "timestamp with time zone|notnull=true|default=now()"
+  },
+  {
+    "kind": "column",
+    "name": "admin_audit_logs.id",
+    "definition": "text|notnull=true|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_audit_logs.organization_id",
+    "definition": "text|notnull=false|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_audit_logs.reason",
+    "definition": "text|notnull=false|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_audit_logs.request_id",
+    "definition": "text|notnull=true|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_audit_logs.result",
+    "definition": "text|notnull=true|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_audit_logs.target_id",
+    "definition": "text|notnull=false|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_audit_logs.target_type",
+    "definition": "text|notnull=true|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_feature_flags.enabled",
+    "definition": "boolean|notnull=true|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_feature_flags.name",
+    "definition": "text|notnull=true|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_feature_flags.scope",
+    "definition": "text|notnull=true|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_feature_flags.updated_at",
+    "definition": "timestamp with time zone|notnull=true|default=now()"
+  },
+  {
+    "kind": "column",
+    "name": "admin_feature_flags.version",
+    "definition": "integer|notnull=true|default=1"
+  },
+  {
+    "kind": "column",
+    "name": "admin_profiles.created_at",
+    "definition": "timestamp with time zone|notnull=true|default=now()"
+  },
+  {
+    "kind": "column",
+    "name": "admin_profiles.revoked_before",
+    "definition": "bigint|notnull=true|default=0"
+  },
+  {
+    "kind": "column",
+    "name": "admin_profiles.role",
+    "definition": "text|notnull=true|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_profiles.status",
+    "definition": "text|notnull=true|default='Active'::text"
+  },
+  {
+    "kind": "column",
+    "name": "admin_profiles.user_id",
+    "definition": "text|notnull=true|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_profiles.version",
+    "definition": "integer|notnull=true|default=1"
+  },
+  {
+    "kind": "column",
+    "name": "admin_role_permissions.permission",
+    "definition": "text|notnull=true|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_role_permissions.role",
+    "definition": "text|notnull=true|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_sessions.created_at",
+    "definition": "timestamp with time zone|notnull=true|default=now()"
+  },
+  {
+    "kind": "column",
+    "name": "admin_sessions.expires_at",
+    "definition": "bigint|notnull=true|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_sessions.issued_at",
+    "definition": "bigint|notnull=true|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_sessions.revoked",
+    "definition": "boolean|notnull=true|default=false"
+  },
+  {
+    "kind": "column",
+    "name": "admin_sessions.token_hash",
+    "definition": "text|notnull=true|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_sessions.user_id",
+    "definition": "text|notnull=true|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_support_notes.author_id",
+    "definition": "text|notnull=true|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_support_notes.body",
+    "definition": "text|notnull=true|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_support_notes.created_at",
+    "definition": "timestamp with time zone|notnull=true|default=now()"
+  },
+  {
+    "kind": "column",
+    "name": "admin_support_notes.id",
+    "definition": "text|notnull=true|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_support_notes.ticket_id",
+    "definition": "text|notnull=true|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_support_notes.visibility",
+    "definition": "text|notnull=true|default='internal'::text"
+  },
+  {
+    "kind": "column",
+    "name": "admin_support_tickets.assigned_admin_id",
+    "definition": "text|notnull=false|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_support_tickets.category",
+    "definition": "text|notnull=true|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_support_tickets.created_at",
+    "definition": "timestamp with time zone|notnull=true|default=now()"
+  },
+  {
+    "kind": "column",
+    "name": "admin_support_tickets.id",
+    "definition": "text|notnull=true|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_support_tickets.organization_id",
+    "definition": "text|notnull=true|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_support_tickets.priority",
+    "definition": "text|notnull=true|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_support_tickets.requester_user_id",
+    "definition": "text|notnull=false|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_support_tickets.resolution_reason",
+    "definition": "text|notnull=false|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_support_tickets.resolved_at",
+    "definition": "timestamp with time zone|notnull=false|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_support_tickets.source_request_id",
+    "definition": "text|notnull=false|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_support_tickets.status",
+    "definition": "text|notnull=true|default='Open'::text"
+  },
+  {
+    "kind": "column",
+    "name": "admin_support_tickets.subject",
+    "definition": "text|notnull=true|default="
+  },
+  {
+    "kind": "column",
+    "name": "admin_support_tickets.updated_at",
+    "definition": "timestamp with time zone|notnull=true|default=now()"
+  },
+  {
+    "kind": "column",
+    "name": "admin_support_tickets.version",
+    "definition": "integer|notnull=true|default=1"
+  },
+  {
+    "kind": "column",
+    "name": "organizations.control_version",
+    "definition": "integer|notnull=true|default=1"
+  },
+  {
+    "kind": "column",
+    "name": "users.account_status",
+    "definition": "text|notnull=true|default='Active'::text"
+  },
+  {
+    "kind": "column",
+    "name": "users.control_revoked_before",
+    "definition": "bigint|notnull=true|default=0"
+  },
+  {
+    "kind": "column",
+    "name": "users.control_version",
+    "definition": "integer|notnull=true|default=1"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_announcements.admin_announcements_approved_by_fkey",
+    "definition": "FOREIGN KEY (approved_by) REFERENCES admin_profiles(user_id)"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_announcements.admin_announcements_author_id_fkey",
+    "definition": "FOREIGN KEY (author_id) REFERENCES admin_profiles(user_id)"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_announcements.admin_announcements_author_id_not_null",
+    "definition": "NOT NULL author_id"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_announcements.admin_announcements_body_check",
+    "definition": "CHECK (((length(body) >= 1) AND (length(body) <= 4000)))"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_announcements.admin_announcements_body_not_null",
+    "definition": "NOT NULL body"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_announcements.admin_announcements_check",
+    "definition": "CHECK (((approved_by IS NULL) OR (approved_by <> author_id)))"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_announcements.admin_announcements_created_at_not_null",
+    "definition": "NOT NULL created_at"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_announcements.admin_announcements_id_not_null",
+    "definition": "NOT NULL id"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_announcements.admin_announcements_organization_id_fkey",
+    "definition": "FOREIGN KEY (organization_id) REFERENCES organizations(id)"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_announcements.admin_announcements_organization_id_not_null",
+    "definition": "NOT NULL organization_id"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_announcements.admin_announcements_pkey",
+    "definition": "PRIMARY KEY (id)"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_announcements.admin_announcements_status_check",
+    "definition": "CHECK ((status = ANY (ARRAY['Draft'::text, 'Approved'::text, 'Published'::text])))"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_announcements.admin_announcements_status_not_null",
+    "definition": "NOT NULL status"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_announcements.admin_announcements_title_check",
+    "definition": "CHECK (((length(title) >= 3) AND (length(title) <= 160)))"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_announcements.admin_announcements_title_not_null",
+    "definition": "NOT NULL title"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_announcements.admin_announcements_version_not_null",
+    "definition": "NOT NULL version"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_audit_logs.admin_audit_logs_action_not_null",
+    "definition": "NOT NULL action"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_audit_logs.admin_audit_logs_administrator_id_fkey",
+    "definition": "FOREIGN KEY (administrator_id) REFERENCES users(id)"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_audit_logs.admin_audit_logs_changes_json_not_null",
+    "definition": "NOT NULL changes_json"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_audit_logs.admin_audit_logs_created_at_not_null",
+    "definition": "NOT NULL created_at"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_audit_logs.admin_audit_logs_id_not_null",
+    "definition": "NOT NULL id"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_audit_logs.admin_audit_logs_organization_id_fkey",
+    "definition": "FOREIGN KEY (organization_id) REFERENCES organizations(id)"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_audit_logs.admin_audit_logs_pkey",
+    "definition": "PRIMARY KEY (id)"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_audit_logs.admin_audit_logs_request_id_not_null",
+    "definition": "NOT NULL request_id"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_audit_logs.admin_audit_logs_result_check",
+    "definition": "CHECK ((result = ANY (ARRAY['success'::text, 'denied'::text])))"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_audit_logs.admin_audit_logs_result_not_null",
+    "definition": "NOT NULL result"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_audit_logs.admin_audit_logs_target_type_not_null",
+    "definition": "NOT NULL target_type"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_feature_flags.admin_feature_flags_enabled_not_null",
+    "definition": "NOT NULL enabled"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_feature_flags.admin_feature_flags_name_check",
+    "definition": "CHECK ((name = 'control_support_creation'::text))"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_feature_flags.admin_feature_flags_name_not_null",
+    "definition": "NOT NULL name"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_feature_flags.admin_feature_flags_pkey",
+    "definition": "PRIMARY KEY (name, scope)"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_feature_flags.admin_feature_flags_scope_not_null",
+    "definition": "NOT NULL scope"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_feature_flags.admin_feature_flags_updated_at_not_null",
+    "definition": "NOT NULL updated_at"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_feature_flags.admin_feature_flags_version_not_null",
+    "definition": "NOT NULL version"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_profiles.admin_profiles_created_at_not_null",
+    "definition": "NOT NULL created_at"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_profiles.admin_profiles_pkey",
+    "definition": "PRIMARY KEY (user_id)"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_profiles.admin_profiles_revoked_before_not_null",
+    "definition": "NOT NULL revoked_before"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_profiles.admin_profiles_role_check",
+    "definition": "CHECK ((role = ANY (ARRAY['SUPER_ADMIN'::text, 'ADMIN'::text, 'SUPPORT'::text, 'BILLING_ADMIN'::text, 'READ_ONLY_ANALYST'::text])))"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_profiles.admin_profiles_role_not_null",
+    "definition": "NOT NULL role"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_profiles.admin_profiles_status_check",
+    "definition": "CHECK ((status = ANY (ARRAY['Active'::text, 'Suspended'::text])))"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_profiles.admin_profiles_status_not_null",
+    "definition": "NOT NULL status"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_profiles.admin_profiles_user_id_fkey",
+    "definition": "FOREIGN KEY (user_id) REFERENCES users(id)"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_profiles.admin_profiles_user_id_not_null",
+    "definition": "NOT NULL user_id"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_profiles.admin_profiles_version_not_null",
+    "definition": "NOT NULL version"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_role_permissions.admin_role_permissions_permission_not_null",
+    "definition": "NOT NULL permission"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_role_permissions.admin_role_permissions_pkey",
+    "definition": "PRIMARY KEY (role, permission)"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_role_permissions.admin_role_permissions_role_check",
+    "definition": "CHECK ((role = ANY (ARRAY['SUPER_ADMIN'::text, 'ADMIN'::text, 'SUPPORT'::text, 'BILLING_ADMIN'::text, 'READ_ONLY_ANALYST'::text])))"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_role_permissions.admin_role_permissions_role_not_null",
+    "definition": "NOT NULL role"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_sessions.admin_sessions_created_at_not_null",
+    "definition": "NOT NULL created_at"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_sessions.admin_sessions_expires_at_not_null",
+    "definition": "NOT NULL expires_at"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_sessions.admin_sessions_issued_at_not_null",
+    "definition": "NOT NULL issued_at"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_sessions.admin_sessions_pkey",
+    "definition": "PRIMARY KEY (token_hash)"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_sessions.admin_sessions_revoked_not_null",
+    "definition": "NOT NULL revoked"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_sessions.admin_sessions_token_hash_not_null",
+    "definition": "NOT NULL token_hash"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_sessions.admin_sessions_user_id_fkey",
+    "definition": "FOREIGN KEY (user_id) REFERENCES admin_profiles(user_id)"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_sessions.admin_sessions_user_id_not_null",
+    "definition": "NOT NULL user_id"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_support_notes.admin_support_notes_author_id_fkey",
+    "definition": "FOREIGN KEY (author_id) REFERENCES admin_profiles(user_id)"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_support_notes.admin_support_notes_author_id_not_null",
+    "definition": "NOT NULL author_id"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_support_notes.admin_support_notes_body_check",
+    "definition": "CHECK (((length(body) >= 1) AND (length(body) <= 4000)))"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_support_notes.admin_support_notes_body_not_null",
+    "definition": "NOT NULL body"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_support_notes.admin_support_notes_created_at_not_null",
+    "definition": "NOT NULL created_at"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_support_notes.admin_support_notes_id_not_null",
+    "definition": "NOT NULL id"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_support_notes.admin_support_notes_pkey",
+    "definition": "PRIMARY KEY (id)"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_support_notes.admin_support_notes_ticket_id_fkey",
+    "definition": "FOREIGN KEY (ticket_id) REFERENCES admin_support_tickets(id)"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_support_notes.admin_support_notes_ticket_id_not_null",
+    "definition": "NOT NULL ticket_id"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_support_notes.admin_support_notes_visibility_check",
+    "definition": "CHECK ((visibility = 'internal'::text))"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_support_notes.admin_support_notes_visibility_not_null",
+    "definition": "NOT NULL visibility"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_support_tickets.admin_support_tickets_assigned_admin_id_fkey",
+    "definition": "FOREIGN KEY (assigned_admin_id) REFERENCES admin_profiles(user_id)"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_support_tickets.admin_support_tickets_category_check",
+    "definition": "CHECK ((category = ANY (ARRAY['Account'::text, 'Authentication'::text, 'Billing'::text, 'Welcome Books'::text, 'Guest Access'::text, 'Reservations'::text, 'Cleaning'::text, 'Inspections'::text, 'Incidents'::text, 'Technical Issue'::text, 'Feature Request'::text, 'Other'::text])))"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_support_tickets.admin_support_tickets_category_not_null",
+    "definition": "NOT NULL category"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_support_tickets.admin_support_tickets_created_at_not_null",
+    "definition": "NOT NULL created_at"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_support_tickets.admin_support_tickets_id_not_null",
+    "definition": "NOT NULL id"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_support_tickets.admin_support_tickets_organization_id_fkey",
+    "definition": "FOREIGN KEY (organization_id) REFERENCES organizations(id)"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_support_tickets.admin_support_tickets_organization_id_not_null",
+    "definition": "NOT NULL organization_id"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_support_tickets.admin_support_tickets_pkey",
+    "definition": "PRIMARY KEY (id)"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_support_tickets.admin_support_tickets_priority_check",
+    "definition": "CHECK ((priority = ANY (ARRAY['Low'::text, 'Normal'::text, 'High'::text, 'Urgent'::text])))"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_support_tickets.admin_support_tickets_priority_not_null",
+    "definition": "NOT NULL priority"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_support_tickets.admin_support_tickets_requester_user_id_fkey",
+    "definition": "FOREIGN KEY (requester_user_id) REFERENCES users(id)"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_support_tickets.admin_support_tickets_source_request_id_fkey",
+    "definition": "FOREIGN KEY (source_request_id) REFERENCES support_requests(id)"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_support_tickets.admin_support_tickets_status_check",
+    "definition": "CHECK ((status = ANY (ARRAY['Open'::text, 'In Progress'::text, 'Waiting for Customer'::text, 'Escalated'::text, 'Resolved'::text, 'Closed'::text])))"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_support_tickets.admin_support_tickets_status_not_null",
+    "definition": "NOT NULL status"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_support_tickets.admin_support_tickets_subject_check",
+    "definition": "CHECK (((length(subject) >= 3) AND (length(subject) <= 200)))"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_support_tickets.admin_support_tickets_subject_not_null",
+    "definition": "NOT NULL subject"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_support_tickets.admin_support_tickets_updated_at_not_null",
+    "definition": "NOT NULL updated_at"
+  },
+  {
+    "kind": "constraint",
+    "name": "admin_support_tickets.admin_support_tickets_version_not_null",
+    "definition": "NOT NULL version"
+  },
+  {
+    "kind": "constraint",
+    "name": "users.users_account_status_check",
+    "definition": "CHECK ((account_status = ANY (ARRAY['Active'::text, 'Suspended'::text])))"
+  },
+  {
+    "kind": "function",
+    "name": "reject_admin_audit_mutation()",
+    "definition": "CREATE OR REPLACE FUNCTION public.reject_admin_audit_mutation()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN RAISE EXCEPTION 'Administrative audit records are append-only'; END $function$\n|security_definer=false"
+  },
+  {
+    "kind": "index",
+    "name": "admin_announcements_org",
+    "definition": "CREATE INDEX admin_announcements_org ON public.admin_announcements USING btree (organization_id, created_at DESC)"
+  },
+  {
+    "kind": "index",
+    "name": "admin_announcements_pkey",
+    "definition": "CREATE UNIQUE INDEX admin_announcements_pkey ON public.admin_announcements USING btree (id)"
+  },
+  {
+    "kind": "index",
+    "name": "admin_audit_logs_pkey",
+    "definition": "CREATE UNIQUE INDEX admin_audit_logs_pkey ON public.admin_audit_logs USING btree (id)"
+  },
+  {
+    "kind": "index",
+    "name": "admin_audit_org",
+    "definition": "CREATE INDEX admin_audit_org ON public.admin_audit_logs USING btree (organization_id, created_at DESC)"
+  },
+  {
+    "kind": "index",
+    "name": "admin_audit_recent",
+    "definition": "CREATE INDEX admin_audit_recent ON public.admin_audit_logs USING btree (created_at DESC)"
+  },
+  {
+    "kind": "index",
+    "name": "admin_feature_flags_pkey",
+    "definition": "CREATE UNIQUE INDEX admin_feature_flags_pkey ON public.admin_feature_flags USING btree (name, scope)"
+  },
+  {
+    "kind": "index",
+    "name": "admin_profiles_pkey",
+    "definition": "CREATE UNIQUE INDEX admin_profiles_pkey ON public.admin_profiles USING btree (user_id)"
+  },
+  {
+    "kind": "index",
+    "name": "admin_role_permissions_pkey",
+    "definition": "CREATE UNIQUE INDEX admin_role_permissions_pkey ON public.admin_role_permissions USING btree (role, permission)"
+  },
+  {
+    "kind": "index",
+    "name": "admin_sessions_pkey",
+    "definition": "CREATE UNIQUE INDEX admin_sessions_pkey ON public.admin_sessions USING btree (token_hash)"
+  },
+  {
+    "kind": "index",
+    "name": "admin_sessions_user",
+    "definition": "CREATE INDEX admin_sessions_user ON public.admin_sessions USING btree (user_id, expires_at)"
+  },
+  {
+    "kind": "index",
+    "name": "admin_support_notes_pkey",
+    "definition": "CREATE UNIQUE INDEX admin_support_notes_pkey ON public.admin_support_notes USING btree (id)"
+  },
+  {
+    "kind": "index",
+    "name": "admin_support_org",
+    "definition": "CREATE INDEX admin_support_org ON public.admin_support_tickets USING btree (organization_id, created_at DESC)"
+  },
+  {
+    "kind": "index",
+    "name": "admin_support_tickets_pkey",
+    "definition": "CREATE UNIQUE INDEX admin_support_tickets_pkey ON public.admin_support_tickets USING btree (id)"
+  },
+  {
+    "kind": "permission",
+    "name": "ADMIN:billing.read",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "ADMIN:communications.publish",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "ADMIN:communications.read",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "ADMIN:communications.write",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "ADMIN:operations.read",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "ADMIN:organizations.read",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "ADMIN:organizations.write",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "ADMIN:overview.read",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "ADMIN:properties.read",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "ADMIN:reports.read",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "ADMIN:support.read",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "ADMIN:support.write",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "ADMIN:users.read",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "ADMIN:users.write",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "BILLING_ADMIN:billing.read",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "BILLING_ADMIN:billing.write",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "BILLING_ADMIN:organizations.read",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "READ_ONLY_ANALYST:billing.read",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "READ_ONLY_ANALYST:operations.read",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "READ_ONLY_ANALYST:organizations.read",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "READ_ONLY_ANALYST:overview.read",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "READ_ONLY_ANALYST:properties.read",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "READ_ONLY_ANALYST:reports.read",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "READ_ONLY_ANALYST:users.read",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "SUPER_ADMIN:audit.read",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "SUPER_ADMIN:billing.read",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "SUPER_ADMIN:billing.write",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "SUPER_ADMIN:communications.publish",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "SUPER_ADMIN:communications.read",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "SUPER_ADMIN:communications.write",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "SUPER_ADMIN:operations.read",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "SUPER_ADMIN:organizations.read",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "SUPER_ADMIN:organizations.write",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "SUPER_ADMIN:overview.read",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "SUPER_ADMIN:properties.read",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "SUPER_ADMIN:reports.read",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "SUPER_ADMIN:security.read",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "SUPER_ADMIN:security.write",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "SUPER_ADMIN:settings.read",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "SUPER_ADMIN:settings.write",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "SUPER_ADMIN:support.read",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "SUPER_ADMIN:support.write",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "SUPER_ADMIN:system.read",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "SUPER_ADMIN:users.read",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "SUPER_ADMIN:users.write",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "SUPPORT:organizations.read",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "SUPPORT:support.read",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "SUPPORT:support.write",
+    "definition": "present"
+  },
+  {
+    "kind": "permission",
+    "name": "SUPPORT:users.read",
+    "definition": "present"
+  },
+  {
+    "kind": "trigger",
+    "name": "admin_audit_logs.admin_audit_immutable",
+    "definition": "CREATE TRIGGER admin_audit_immutable BEFORE DELETE OR UPDATE ON public.admin_audit_logs FOR EACH ROW EXECUTE FUNCTION reject_admin_audit_mutation()|enabled=O"
+  }
+]

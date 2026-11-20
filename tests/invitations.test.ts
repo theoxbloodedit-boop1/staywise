@@ -18,6 +18,12 @@ test('T08: real signature verification requires issuer, audience, expiry and str
     process.env.NEON_AUTH_BASE_URL=fixture.issuer; process.env.NEON_AUTH_JWKS_URL=`${fixture.issuer}/jwks`; process.env.NEON_AUTH_AUDIENCE='staywise-test';
     assert.equal((await verifyNeonAuthJwt(await fixture.sign()))?.emailVerified,true);
     assert.equal((await verifyNeonAuthJwt(await fixture.sign({email_verified:'false'})))?.emailVerified,false);
+    assert.equal((await verifyNeonAuthJwt(await fixture.sign({email_verified:undefined,emailVerified:true})))?.emailVerified,true);
+    assert.equal((await verifyNeonAuthJwt(await fixture.sign({email_verified:undefined,emailVerified:false})))?.emailVerified,false);
+    assert.equal((await verifyNeonAuthJwt(await fixture.sign({email_verified:undefined,emailVerified:'true'})))?.emailVerified,false);
+    assert.equal((await verifyNeonAuthJwt(await fixture.sign({email_verified:false,emailVerified:true})))?.emailVerified,false);
+    assert.equal((await verifyNeonAuthJwt(await fixture.sign({email_verified:true,emailVerified:false})))?.emailVerified,false);
+    assert.equal((await verifyNeonAuthJwt(await fixture.sign({email_verified:undefined,emailVerified:undefined})))?.emailVerified,false);
     assert.equal(await verifyNeonAuthJwt(await fixture.sign({ aud:'wrong' })),null);
     assert.equal(await verifyNeonAuthJwt(await fixture.sign({ exp: 1 })),null);
     process.env.NEON_AUTH_BASE_URL=fixture.issuer+'/wrong';

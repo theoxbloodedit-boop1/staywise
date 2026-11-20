@@ -133,6 +133,9 @@ guidebooksRouter.patch(
     if (!canAccessProperty(actor, propertyId)) return res.status(403).json({ error: 'Property access denied.' });
 
     const b = req.body || {};
+    if (b.is_visible && !sec.is_visible && b.publication_confirmed !== true) {
+      return res.status(422).json({ error: 'Review all property facts and explicitly confirm publication.', code: 'PUBLICATION_CONFIRMATION_REQUIRED' });
+    }
     const nextVisible = b.is_visible !== undefined ? (b.is_visible ? 1 : 0) : sec.is_visible;
     const nextTitle = b.title ?? sec.title;
 

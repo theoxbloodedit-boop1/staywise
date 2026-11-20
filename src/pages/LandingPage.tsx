@@ -612,7 +612,7 @@ export function LandingPage({
                         <span className="text-xs font-medium text-teal-800">during Early Access</span>
                       </div>
                       <div className="text-xs font-medium text-slate-700 mt-1">
-                        Up to {plan.propertyLimit} properties · {plan.aiMonthlyAllowance.toLocaleString()} AI answers / month
+                        Up to {plan.propertyLimit} properties · {plan.aiMonthlyAllowance.toLocaleString()} guide search answers / month
                       </div>
                       <p className="text-[13px] text-slate-600 mt-3">{plan.summary}</p>
 

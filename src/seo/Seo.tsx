@@ -23,7 +23,7 @@ export interface SeoRouteMeta {
 export const HOME_FAQS = [
   {
     q: 'Is Staywise really free right now?',
-    a: 'Yes. Staywise is currently 100% free during Early Access with full feature access unlocked—including digital welcome books, AES-256 lock vaults, AI guest assistance, cleaning checklists, inspections, and work orders—with no credit card required.',
+    a: 'Yes. Staywise is currently 100% free during Early Access with full feature access unlocked—including digital welcome books, AES-256 lock vaults, keyword-based guide search, cleaning checklists, inspections, and work orders—with no credit card required.',
   },
   {
     q: 'Do guests have to download an app or create a login?',
@@ -49,7 +49,7 @@ export const PUBLIC_SEO_META: Record<string, SeoRouteMeta> = {
     file: 'index.html',
     title: 'Staywise — Free Guest Welcome Books & Property Operations',
     description:
-      'Mobile guest welcome books, AES-256 stay-gated door codes, grounded guest AI assistance, and photo-verified turnover checklists—100% free with full access.',
+      'Mobile guest welcome books, AES-256 stay-gated door codes, keyword-based guide search, and photo-verified turnover checklists—100% free with full access.',
     priority: '1.0',
     changefreq: 'weekly',
     schemas: [softwareApplicationSchema(), faqSchema(HOME_FAQS)],
@@ -59,7 +59,7 @@ export const PUBLIC_SEO_META: Record<string, SeoRouteMeta> = {
     file: 'features.html',
     title: 'Features — Guest Welcome Books, Lock Vault & Turnover Ops | Staywise',
     description:
-      'Explore Staywise 8-section digital guidebooks, QR and printable PDF exports, rate-limited smart-lock vaults, grounded AI assistant, and photo-verified checklists.',
+      'Explore Staywise 8-section digital guidebooks, QR and printable PDF exports, rate-limited smart-lock vaults, keyword-based guide search, and photo-verified checklists.',
     priority: '0.9',
     changefreq: 'weekly',
     schemas: [
@@ -76,7 +76,7 @@ export const PUBLIC_SEO_META: Record<string, SeoRouteMeta> = {
     file: 'guest-guidebook.html',
     title: 'Digital Guest Welcome Books & Stay-Gated Access Vault | Staywise',
     description:
-      'Publish mobile short-term rental welcome books with QR cards, printable PDFs, AES-256 smart-lock PIN protection, and a grounded guest AI assistant.',
+      'Publish mobile short-term rental welcome books with QR cards, printable PDFs, AES-256 smart-lock PIN protection, and a keyword-based guide search.',
     priority: '0.9',
     changefreq: 'weekly',
     schemas: [

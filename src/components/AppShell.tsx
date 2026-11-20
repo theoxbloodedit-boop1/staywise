@@ -100,7 +100,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     id: 'ai-console',
-    label: 'AI Guest Assistant',
+    label: 'Guide Search',
     icon: Bot,
     roles: ['Platform Super Admin', 'Organization Owner', 'Organization Admin', 'Property Manager', 'Concierge'],
     section: 'ops',

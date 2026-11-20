@@ -114,6 +114,33 @@ test("Control Center: signed identity, explicit roles, safe directories, support
     assert.equal((await request("/security", "billing")).status, 403);
     assert.equal((await request("/settings", "support")).status, 403);
     assert.equal((await request("/overview", "super")).status, 200);
+    // Full read-navigation smoke matrix over real local HTTP + SQL.
+    for (const path of [
+      '/session', '/organizations', '/users', '/properties', '/reservations',
+      '/turnovers', '/incidents', '/subscriptions', '/support',
+      '/communications', '/audit', '/security', '/analytics', '/revenue',
+      '/settings', '/system',
+    ]) {
+      const response = await request(path);
+      assert.equal(response.status, 200, `SUPER_ADMIN read navigation ${path}`);
+      assert.match(response.headers.get('cache-control') || '', /no-store/);
+      assert.equal((await request(path, 'customer')).status, 403, `Customer denied ${path}`);
+    }
+    const originalSuperToken = tokens.super;
+    tokens.super = await jwt.sign({ email_verified: undefined, emailVerified: true }, 'super');
+    assert.equal((await request('/session')).status, 200, 'Better Auth signed camelCase claim permits explicit internal profile');
+    tokens.super = await jwt.sign({ email_verified: false, emailVerified: true }, 'super');
+    assert.equal((await request('/session')).status, 401, 'Conflicting signed email claims fail closed');
+    tokens.super = originalSuperToken;
+    const sessionStartsBefore = await executor.queryOne<any>(
+      "SELECT count(*)::int AS n FROM admin_audit_logs WHERE action='session.started' AND administrator_id='super'",
+    );
+    await request('/session');
+    await request('/session');
+    const sessionStartsAfter = await executor.queryOne<any>(
+      "SELECT count(*)::int AS n FROM admin_audit_logs WHERE action='session.started' AND administrator_id='super'",
+    );
+    assert.equal(sessionStartsAfter.n, sessionStartsBefore.n, 'Same JWT does not duplicate session.started audit');
     const overview = (await (await request("/overview")).json()) as any;
     assert.equal(overview.counts.organizations, 2);
     assert.ok(overview.unavailable.includes("MRR"));
@@ -631,6 +658,13 @@ test("Control migration is explicit, additive, transactional, replay-safe and ch
       new URL("../db/migrations/005_control_center.sql", import.meta.url),
       "utf8",
     );
+    // A failure after DDL must roll back objects AND the migration ledger.
+    await assert.rejects(applyControlMigration(database,
+      "CREATE TABLE control_rollback_probe(id text); SELECT * FROM deliberately_missing_control_table;"));
+    assert.equal((await executor.queryOne<any>(
+      "SELECT to_regclass('public.control_rollback_probe') AS name"))?.name, null);
+    assert.equal((await executor.queryOne<any>(
+      "SELECT to_regclass('public.control_schema_migrations') AS name"))?.name, null);
     assert.equal((await applyControlMigration(database, sql)).applied, true);
     assert.equal((await applyControlMigration(database, sql)).applied, false);
     await assert.rejects(

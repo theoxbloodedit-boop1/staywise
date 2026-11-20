@@ -7,7 +7,7 @@ export const OPERATIONAL_ROLES = [
 export const ORGANIZATION_WIDE_ROLES = ['Platform Super Admin', 'Organization Owner', 'Organization Admin', 'Property Manager'];
 
 export class AuthorizationError extends Error {
-  constructor(readonly status: 403 | 404 | 422, readonly code: string) {
+  constructor(readonly status: 403 | 404 | 422 | 429, readonly code: string, readonly retryAfterSec = 0) {
     super(status === 404 ? 'Resource not found.' : status === 422 ? 'Invalid resource reference.' : 'Action not permitted.');
     this.name = 'AuthorizationError';
   }

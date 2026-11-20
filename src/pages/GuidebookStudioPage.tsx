@@ -143,14 +143,14 @@ export function GuidebookStudioPage({
   const handleToggleVisible = async (sec: GuidebookSection) => {
     if (!property) return;
     const nextVis = !sec.is_visible;
-    setSections((prev) =>
-      prev.map((s) => (s.section_key === sec.section_key ? { ...s, is_visible: nextVis } : s))
-    );
-    await apiFetch(`/api/guidebooks/${property.id}/sections/${sec.section_key}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ is_visible: nextVis }),
-    });
-    notifySaved(`${sec.title} ${nextVis ? 'visible' : 'hidden'} in Guest Portal`);
+    if (nextVis && !window.confirm('I have reviewed this section. Its addresses, equipment, contacts and safety instructions are accurate for this property. Show it to verified guests?')) return;
+    try {
+      await apiFetch(`/api/guidebooks/${property.id}/sections/${sec.section_key}`, {
+        method: 'PATCH', body: JSON.stringify({ is_visible: nextVis, publication_confirmed: nextVis }),
+      });
+      setSections(prev => prev.map(s => s.section_key === sec.section_key ? { ...s, is_visible: nextVis } : s));
+      notifySaved(`${sec.title} ${nextVis ? 'visible to verified guests' : 'hidden'}`);
+    } catch (error: any) { notifySaved(error.message || 'Visibility was not changed.'); }
   };
 
   const handleMoveSection = async (index: number, delta: -1 | 1) => {
@@ -180,7 +180,7 @@ export function GuidebookStudioPage({
       <div className="space-y-5">
         <PageHeader
           title="Digital Welcome Book Studio"
-          description="No-code structured guidebook editor covering all 8 stay sections with live mobile preview, QR access, and PDF export."
+          description="New sections are hidden drafts. Review every fact before showing a section to verified guests. Existing guides must also be checked; a template is not an inspection certificate."
         />
         <Card className="p-8 text-sm text-slate-500">Loading Welcome Book Studio...</Card>
       </div>
@@ -192,7 +192,7 @@ export function GuidebookStudioPage({
       <div className="space-y-5">
         <PageHeader
           title="Digital Welcome Book Studio"
-          description="No-code structured guidebook editor covering all 8 stay sections with live mobile preview, QR access, and PDF export."
+          description="New sections are hidden drafts. Review every fact before showing a section to verified guests. Existing guides must also be checked; a template is not an inspection certificate."
         />
         <Card className="p-8 text-center space-y-3 border-red-200 bg-red-50/40">
           <AlertCircle className="w-6 h-6 text-red-600 mx-auto" />
@@ -211,7 +211,7 @@ export function GuidebookStudioPage({
       <div className="space-y-5">
         <PageHeader
           title="Digital Welcome Book Studio"
-          description="No-code structured guidebook editor covering all 8 stay sections with live mobile preview, QR access, and PDF export."
+          description="New sections are hidden drafts. Review every fact before showing a section to verified guests. Existing guides must also be checked; a template is not an inspection certificate."
           actions={
             onNavigateProperties && (
               <Button size="sm" variant="primary" onClick={onNavigateProperties}>
@@ -253,7 +253,7 @@ export function GuidebookStudioPage({
     <div className="space-y-5">
       <PageHeader
         title="Digital Welcome Book Studio"
-        description="No-code structured guidebook editor covering all 8 stay sections with live mobile preview, QR access, and PDF export."
+        description="New sections are hidden drafts. Review every fact before showing a section to verified guests. Existing guides must also be checked; a template is not an inspection certificate."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {savedNotice && (
@@ -420,7 +420,7 @@ export function GuidebookStudioPage({
                   </div>
                   <Input label="Host Email" value={activeSection.content.hostEmail || ''} onChange={(e) => updateLocalSectionContent('hostEmail', e.target.value)} />
                   <TextArea label="Property Announcements" rows={2} value={activeSection.content.announcements || ''} onChange={(e) => updateLocalSectionContent('announcements', e.target.value)} />
-                  <TextArea label="Important Notes (Used by AI Assistant)" rows={3} value={activeSection.content.importantNotes || ''} onChange={(e) => updateLocalSectionContent('importantNotes', e.target.value)} />
+                  <TextArea label="Important Notes (Used by Guide Search)" rows={3} value={activeSection.content.importantNotes || ''} onChange={(e) => updateLocalSectionContent('importantNotes', e.target.value)} />
                 </div>
               )}
 
