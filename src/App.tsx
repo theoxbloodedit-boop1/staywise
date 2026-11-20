@@ -335,7 +335,7 @@ export default function App() {
             {activeRoute === 'inspections' && <InspectionsPage orgId={session.organizationId} />}
             {activeRoute === 'ai-console' && <AiConsolePage orgId={session.organizationId} />}
             {activeRoute === 'team' && (
-              <TeamPage orgId={session.organizationId} onRefreshContext={hydrateFromBackend} />
+              <TeamPage orgId={session.organizationId} />
             )}
             {activeRoute === 'automations' && <AutomationsPage orgId={session.organizationId} />}
             {activeRoute === 'feedback' && <FeedbackPage orgId={session.organizationId} />}

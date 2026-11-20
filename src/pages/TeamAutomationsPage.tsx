@@ -5,7 +5,7 @@ import { formatDateTimeShort } from '../lib/format';
 import { Badge, Button, Card, Input, Modal, PageHeader, Select, statusToBadgeVariant } from '../components/ui';
 import type { OrgMember } from '../lib/types';
 
-export function TeamPage({ orgId, onRefreshContext }: { orgId: string; onRefreshContext: () => void }) {
+export function TeamPage({ orgId }: { orgId: string }) {
   const [members, setMembers] = useState<OrgMember[]>([]);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [name, setName] = useState('');
@@ -46,7 +46,8 @@ export function TeamPage({ orgId, onRefreshContext }: { orgId: string; onRefresh
       setName('');
       setEmail('');
       await load();
-      onRefreshContext();
+      // Pending invitations do not change the active session. Global hydration
+      // unmounts this page and would discard the one-time token before copying.
     } catch (err: any) {
       setInviteError(err.message || 'Failed to invite team member.');
     }
